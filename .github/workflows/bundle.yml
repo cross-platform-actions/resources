@@ -55,6 +55,11 @@ jobs:
       - name: Archive
         run: tar -C work -c -f resources.tar .
 
+      - name: Extract Version
+        id: version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
+
       - name: Create Release
         id: create_release
         if: startsWith(github.ref, 'refs/tags/v')
