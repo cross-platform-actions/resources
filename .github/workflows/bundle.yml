@@ -4,56 +4,27 @@ on:
   push:
     branches: '*'
     tags: 'v*'
+
   pull_request:
     branches:
       - master
 
 jobs:
-  bundle:
-    name: Bundle
-    runs-on: macos-10.15
+  build_qemu_linux:
+    name: Build QEMU on Linux
+    runs-on: ubuntu-latest
+    container: alpine
     steps:
-      - name: Extract bhyve UEFI firmware
-        uses: vmactions/freebsd-vm@v0.1.3
+      - name: Clone Repository
+        uses: actions/checkout@v2
         with:
-          usesh: true
-          run: |
-            pkg update
-            pkg install -y uefi-edk2-bhyve
-            cp /usr/local/share/uefi-firmware/BHYVE_UEFI.fd uefi.fd
+          persist-credentials: false
 
-      - name: Install QMEU Build Dependencies
-        run: brew install ninja pixman gettext libffi glib pkg-config
+      - name: Install Bash
+        run: apk add --no-cache bash
 
-      - name: Clone QEMU
-        run: git clone --branch v6.0.0 --depth 1 --recurse-submodules https://github.com/qemu/qemu
-
-      # Build QEMU to reduce runtime dependencies of `qemu-img`
-      - name: Build QEMU
-        run: |
-          cd qemu
-          mkdir build
-          cd build
-          ../configure \
-            --without-default-features \
-            --without-default-devices \
-            --enable-tools
-          make
-
-      - name: Install Xhyve
-        run: |
-          brew install --HEAD xhyve
-
-      - name: Bundle Files
-        run: |
-          mkdir work
-          mv uefi.fd work
-          cp qemu/build/qemu-img work
-          cp "$(which xhyve)" work
-          cp "$(brew --cellar xhyve)/$(brew info xhyve --json | jq .[].installed[].version -r)/share/xhyve/test/userboot.so" work
-
-      - name: Archive
-        run: tar -C work -c -f resources.tar .
+      - name: Run CI Script
+        run: ./ci.sh
 
       - name: Extract Version
         id: version
@@ -67,6 +38,43 @@ jobs:
         with:
           name: Resources ${{ steps.version.outputs.VERSION }}
           draft: true
-          files: resources.tar
+          files: '*.tar'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build_qemu_macos:
+    name: Build QEMU on macOS
+    runs-on: macos-10.15
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+
+      - name: Extract bhyve UEFI firmware
+        uses: vmactions/freebsd-vm@v0.1.3
+        with:
+          usesh: true
+          run: |
+            pkg update
+            pkg install -y uefi-edk2-bhyve
+            cp /usr/local/share/uefi-firmware/BHYVE_UEFI.fd uefi.fd
+
+      - name: Run CI Script
+        run: ./ci.sh
+
+      - name: Extract Version
+        id: version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
+
+      - name: Create Release
+        id: create_release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Resources ${{ steps.version.outputs.VERSION }}
+          draft: true
+          files: '*.tar'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
