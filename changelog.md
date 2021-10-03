@@ -1,5 +1,11 @@
 # Resources Changelog
 
+## 0.3.0
+
+### New/Changed Features
+
+* Removed all unused architectures. The only remaining one is x86_64.
+
 ## 0.2.0
 
 ### New/Changed Features

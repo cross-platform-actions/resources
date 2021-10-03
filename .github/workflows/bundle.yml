@@ -51,6 +51,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install Bash
+        run: brew install bash
+
       - name: Extract bhyve UEFI firmware
         uses: vmactions/freebsd-vm@v0.1.3
         with:

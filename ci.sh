@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 
 set -ex
 set -o pipefail
@@ -13,25 +14,38 @@ else
   echo "Unsupported system: $uname"
 fi
 
+# "alpha" \
+# "arm" \
+# "hppa" \
+# "i386" \
+# "m68k" \
+# "mips" \
+# "mips64" \
+# "mips64el" \
+# "mipsel" \
+# "ppc" \
+# "ppc64" \
+# "riscv32" \
+# "riscv64" \
+# "s390x" \
+# "sparc" \
+# "sparc64" \
+
 declare -a qemu_platforms=( \
-  "aarch64" \
-  "alpha" \
-  "arm" \
-  "hppa" \
-  "i386" \
-  "m68k" \
-  "mips" \
-  "mips64" \
-  "mips64el" \
-  "mipsel" \
-  "ppc" \
-  "ppc64" \
-  "riscv32" \
-  "riscv64" \
-  "s390x" \
-  "sparc" \
-  "sparc64" \
   "x86_64" \
+)
+
+declare -A firmwares=( \
+  ["x86_64"]="\
+    pc-bios/bios-256k.bin \
+    pc-bios/efi-e1000.rom \
+    pc-bios/efi-virtio.rom \
+    pc-bios/kvmvapic.bin \
+    pc-bios/vgabios-stdvga.bin"
+
+  ["aarch64"]="\
+    pc-bios/efi-e1000.rom \
+    pc-bios/efi-virtio.rom"
 )
 
 join() {
@@ -106,6 +120,7 @@ build_qemu() {
   pushd qemu/build > /dev/null
 
   ../configure \
+    --prefix=/tmp/cross-platform-actions \
     --disable-auth-pam \
     --disable-bsd-user \
     --disable-cfi-debug \
@@ -150,19 +165,20 @@ install_xhyve() {
 }
 
 bundle_resources() {
-  if [ $system = macos ]; then
-    mkdir work
-    mv uefi.fd work
-    cp qemu/build/qemu-img work
-    cp "$(which xhyve)" work
-    cp "$(brew --cellar xhyve)/$(brew info xhyve --json | jq .[].installed[].version -r)/share/xhyve/test/userboot.so" work
-  else
-    mkdir work
-    cp qemu/build/qemu-img work
-    cp /lib/ld-musl-x86_64.so.1 work
-  fi
-
+  mkdir work
+  cp qemu/build/qemu-img work
   tar -C work -c -f "resources-$system.tar" .
+  rm -rf work
+}
+
+bundle_xhyve() {
+  [ $system != macos ] && return
+
+  mkdir -p work/bin
+  mv uefi.fd work
+  cp "$(which xhyve)" work/bin
+  cp "$(brew --cellar xhyve)/$(brew info xhyve --json | jq .[].installed[].version -r)/share/xhyve/test/userboot.so" work
+  tar -C work -c -f "xhyve-$system.tar" .
   rm -rf work
 }
 
@@ -170,10 +186,18 @@ bundle_qemu() {
   local target_dir='work/qemus'
   mkdir -p "$target_dir"
 
-  for platform in "${qemu_platforms[@]/#/qemu-system-}"; do
-    mkdir "$target_dir/$platform"
-    cp "qemu/build/$platform" "$target_dir/$platform/qemu"
-    tar -C "$target_dir/$platform" -c -f "$platform-$system.tar" .
+  for platform in "${qemu_platforms[@]}"; do
+    local -a firms=(${firmwares[$platform]})
+    local qemu_name=${platform/#/qemu-system-}
+    local platform_dir="$target_dir/$qemu_name"
+    local firmware_target_dir="$platform_dir/share/qemu"
+    local qemu_target_dir="$platform_dir/bin"
+
+    mkdir -p "$firmware_target_dir"
+    mkdir -p "$qemu_target_dir"
+    cp "qemu/build/$qemu_name" "$qemu_target_dir/qemu"
+    cp "${firms[@]/#/qemu/}" "$firmware_target_dir"
+    tar -C "$platform_dir" -c -f "$qemu_name-$system.tar" .
   done
 }
 
@@ -183,4 +207,5 @@ patch_qemu_for_alpine
 build_qemu
 install_xhyve
 bundle_resources
+bundle_xhyve
 bundle_qemu
