@@ -56,7 +56,7 @@ join() {
 
 install_prerequisite() {
   if [ $system = macos ]; then
-    brew install ninja pixman findutils
+    brew install ninja pixman findutils glib
   else
     apk add --no-cache \
       g++ \
@@ -111,14 +111,30 @@ EOF
 
 build_qemu() {
   if [ $system = macos ]; then
+    declare -a extra_ldflags=(
+      "-framework" "Foundation"
+      "-liconv"
+      "-lpcre"
+      "-lresolv"
+      "/usr/local/opt/gettext/lib/libintl.a"
+      "/usr/local/opt/glib/lib/libgio-2.0.a"
+      "/usr/local/opt/glib/lib/libglib-2.0.a"
+      "/usr/local/opt/glib/lib/libgobject-2.0.a"
+      "/usr/local/opt/pixman/lib/libpixman-1.a"
+      "/usr/local/opt/zstd/lib/libzstd.a"
+    )
+
     local build_flags=''
+    local ldflags="$(join ' ' ${extra_ldflags[@]})"
   else
     local build_flags='--static'
+    local ldflags=''
   fi
 
   mkdir -p qemu/build
   pushd qemu/build > /dev/null
 
+  LDFLAGS="$ldflags" \
   ../configure \
     --prefix=/tmp/cross-platform-actions \
     --disable-auth-pam \
@@ -130,12 +146,18 @@ build_qemu() {
     --disable-debug-mutex \
     --disable-dmg \
     --disable-docs \
+    --disable-gcrypt \
+    --disable-gnutls \
     --disable-gtk \
     --disable-guest-agent \
     --disable-guest-agent-msi \
+    --disable-hax \
     --disable-kvm \
+    --disable-libiscsi \
+    --disable-libssh \
     --disable-libusb \
     --disable-linux-user \
+    --disable-nettle \
     --disable-parallels \
     --disable-qcow1 \
     --disable-qed \
@@ -143,12 +165,11 @@ build_qemu() {
     --disable-smartcard \
     --disable-usb-redir \
     --disable-user \
+    --disable-vdi \
     --disable-vnc \
     --disable-vvfat \
     --disable-xen \
-    --disable-hax \
-    --disable-vdi \
-    --enable-tools \
+    --disable-lzo \
     --enable-lto \
     --enable-tools \
     --target-list="$(join , "${qemu_platforms[@]/%/-softmmu}")" \
