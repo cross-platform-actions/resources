@@ -1,5 +1,15 @@
 # Resources Changelog
 
+## 0.3.1
+
+### New/Changed Features:
+
+* Statically link all non-system provided libraries on macOS
+
+### Bugs Fixed:
+
+* Missing QEMU dependency glib ([cross-platform-actions/action#5](https://github.com/cross-platform-actions/action/issues/5))
+
 ## 0.3.0
 
 ### New/Changed Features
