@@ -33,6 +33,7 @@ fi
 
 declare -a qemu_platforms=(
   "x86_64"
+  "aarch64"
 )
 
 declare -A firmwares=(
