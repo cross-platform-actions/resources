@@ -31,20 +31,20 @@ fi
 # "sparc" \
 # "sparc64" \
 
-declare -a qemu_platforms=( \
-  "x86_64" \
+declare -a qemu_platforms=(
+  "x86_64"
 )
 
-declare -A firmwares=( \
-  ["x86_64"]="\
-    pc-bios/bios-256k.bin \
-    pc-bios/efi-e1000.rom \
-    pc-bios/efi-virtio.rom \
-    pc-bios/kvmvapic.bin \
+declare -A firmwares=(
+  ["x86_64"]="
+    pc-bios/bios-256k.bin
+    pc-bios/efi-e1000.rom
+    pc-bios/efi-virtio.rom
+    pc-bios/kvmvapic.bin
     pc-bios/vgabios-stdvga.bin"
 
-  ["aarch64"]="\
-    pc-bios/efi-e1000.rom \
+  ["aarch64"]="
+    pc-bios/efi-e1000.rom
     pc-bios/efi-virtio.rom"
 )
 
