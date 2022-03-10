@@ -78,7 +78,7 @@ install_prerequisite() {
 
 clone_qemu_repository() {
   git clone \
-    --branch v6.0.0 \
+    --branch v6.1.0 \
     --depth 1 --recurse-submodules \
     https://github.com/qemu/qemu
 }
