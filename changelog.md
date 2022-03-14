@@ -1,5 +1,7 @@
 # Resources Changelog
 
+* Bump QEMU to 6.2.0
+
 ## 0.3.1
 
 ### New/Changed Features:
