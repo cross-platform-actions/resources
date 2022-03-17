@@ -1,6 +1,11 @@
 # Resources Changelog
 
+## 0.4.0
+
+### New/Changed Features:
+
 * Bump QEMU to 6.2.0
+* The CI script can not be used on Apple Silicon
 
 ## 0.3.1
 
