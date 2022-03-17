@@ -4,14 +4,15 @@
 set -ex
 set -o pipefail
 
-uname="$(uname -s)"
+uname_s="$(uname -s)"
 
-if [ "$uname" = 'Darwin' ]; then
+if [ "$uname_s" = 'Darwin' ]; then
   system=macos
-elif [ "$uname" = 'Linux' ]; then
+elif [ "$uname_s" = 'Linux' ]; then
   system=linux
 else
-  echo "Unsupported system: $uname"
+  echo "Unsupported system: $uname_s"
+  exit 1
 fi
 
 # "alpha" \
@@ -31,9 +32,19 @@ fi
 # "sparc" \
 # "sparc64" \
 
-declare -a qemu_platforms=( \
-  "x86_64" \
-)
+QEMU_VERSION="6.2.0"
+
+uname_m=$(uname -m)
+
+if [ "$uname_m" = "arm64" ]; then
+  declare -a qemu_platforms=( \
+    "aarch64" \
+  )
+else
+  declare -a qemu_platforms=( \
+    "x86_64" \
+  )
+fi
 
 declare -A firmwares=( \
   ["x86_64"]="\
@@ -45,7 +56,8 @@ declare -A firmwares=( \
 
   ["aarch64"]="\
     pc-bios/efi-e1000.rom \
-    pc-bios/efi-virtio.rom"
+    pc-bios/efi-virtio.rom \
+    pc-bios/edk2-aarch64-code.fd"
 )
 
 join() {
@@ -56,12 +68,14 @@ join() {
 
 install_prerequisite() {
   if [ $system = macos ]; then
-    brew install ninja pixman findutils glib
+    HOMEBREW_NO_INSTALL_CLEANUP=true
+    brew install ninja pixman glib
+    [ -n "$GITHUB_ACTIONS" ] || brew install jq xz
   else
     apk add --no-cache \
+      curl \
       g++ \
       gcc \
-      git \
       glib-dev \
       glib-static \
       make \
@@ -72,56 +86,32 @@ install_prerequisite() {
       pixman-static \
       pkgconf \
       python3 \
+      xz \
       zlib-static
   fi
 }
 
-clone_qemu_repository() {
-  git clone \
-    --branch v6.0.0 \
-    --depth 1 --recurse-submodules \
-    https://github.com/qemu/qemu
-}
-
-patch_qemu_for_alpine() {
-  [ $system = macos ] && return
-
-  pushd qemu > /dev/null
-
-  git apply << EOF
-diff --git a/include/hw/s390x/s390-pci-bus.h b/include/hw/s390x/s390-pci-bus.h
-index 49ae9f0..2bed491 100644
---- a/include/hw/s390x/s390-pci-bus.h
-+++ b/include/hw/s390x/s390-pci-bus.h
-@@ -82,7 +82,9 @@ OBJECT_DECLARE_SIMPLE_TYPE(S390PCIIOMMU, S390_PCI_IOMMU)
- #define ZPCI_EDMA_ADDR 0x1ffffffffffffffULL
-
- #define PAGE_SHIFT      12
--#define PAGE_SIZE       (1 << PAGE_SHIFT)
-+#ifndef PAGE_SIZE
-+    #define PAGE_SIZE       (1 << PAGE_SHIFT)
-+#endif
- #define PAGE_MASK       (~(PAGE_SIZE-1))
- #define PAGE_DEFAULT_ACC        0
- #define PAGE_DEFAULT_KEY        (PAGE_DEFAULT_ACC << 4)
-EOF
-
-  popd > /dev/null
+fetch_qemu() {
+  curl -O https://download.qemu.org/qemu-$QEMU_VERSION.tar.xz
+  xz -cd qemu-$QEMU_VERSION.tar.xz | tar -xf -
+  rm -rf qemu && ln -s qemu-$QEMU_VERSION qemu
 }
 
 build_qemu() {
   if [ $system = macos ]; then
+    local PREFIX=$(brew config | awk '/HOMEBREW_PREFIX/ { print $2; }')
+
     declare -a extra_ldflags=(
       "-framework" "Foundation"
       "-liconv"
       "-lpcre"
       "-lresolv"
-      "/usr/local/opt/gettext/lib/libintl.a"
-      "/usr/local/opt/glib/lib/libgio-2.0.a"
-      "/usr/local/opt/glib/lib/libglib-2.0.a"
-      "/usr/local/opt/glib/lib/libgobject-2.0.a"
-      "/usr/local/opt/pixman/lib/libpixman-1.a"
-      "/usr/local/opt/zstd/lib/libzstd.a"
+      "$PREFIX/opt/gettext/lib/libintl.a"
+      "$PREFIX/opt/glib/lib/libgio-2.0.a"
+      "$PREFIX/opt/glib/lib/libglib-2.0.a"
+      "$PREFIX/opt/glib/lib/libgmodule-2.0.a"
+      "$PREFIX/opt/glib/lib/libgobject-2.0.a"
+      "$PREFIX/opt/pixman/lib/libpixman-1.a"
     )
 
     local build_flags=''
@@ -138,6 +128,7 @@ build_qemu() {
   ../configure \
     --prefix=/tmp/cross-platform-actions \
     --disable-auth-pam \
+    --disable-bochs \
     --disable-bsd-user \
     --disable-cfi-debug \
     --disable-cocoa \
@@ -161,16 +152,21 @@ build_qemu() {
     --disable-parallels \
     --disable-qcow1 \
     --disable-qed \
+    --disable-replication \
     --disable-sdl \
     --disable-smartcard \
+    --disable-snappy \
     --disable-usb-redir \
     --disable-user \
+    --disable-vde \
     --disable-vdi \
     --disable-vnc \
     --disable-vvfat \
     --disable-xen \
     --disable-lzo \
+    --disable-zstd \
     --enable-lto \
+    --enable-slirp=git \
     --enable-tools \
     --target-list="$(join , "${qemu_platforms[@]/%/-softmmu}")" \
     $build_flags
@@ -186,7 +182,7 @@ install_xhyve() {
 }
 
 bundle_resources() {
-  mkdir work
+  mkdir -p work
   cp qemu/build/qemu-img work
   tar -C work -c -f "resources-$system.tar" .
   rm -rf work
@@ -196,7 +192,7 @@ bundle_xhyve() {
   [ $system != macos ] && return
 
   mkdir -p work/bin
-  mv uefi.fd work
+  [ -n "$GITHUB_ACTIONS" ] && mv uefi.fd work
   cp "$(which xhyve)" work/bin
   cp "$(brew --cellar xhyve)/$(brew info xhyve --json | jq .[].installed[].version -r)/share/xhyve/test/userboot.so" work
   tar -C work -c -f "xhyve-$system.tar" .
@@ -216,6 +212,10 @@ bundle_qemu() {
 
     mkdir -p "$firmware_target_dir"
     mkdir -p "$qemu_target_dir"
+    if [ -f qemu/pc-bios/edk2-aarch64-code.fd.bz2 ]; then
+      rm -f qemu/pc-bios/edk2-aarch64-code.fd
+      bzip2 -d qemu/pc-bios/edk2-aarch64-code.fd.bz2
+    fi
     cp "qemu/build/$qemu_name" "$qemu_target_dir/qemu"
     cp "${firms[@]/#/qemu/}" "$firmware_target_dir"
     tar -C "$platform_dir" -c -f "$qemu_name-$system.tar" .
@@ -223,10 +223,11 @@ bundle_qemu() {
 }
 
 install_prerequisite
-clone_qemu_repository
-patch_qemu_for_alpine
+fetch_qemu
 build_qemu
-install_xhyve
 bundle_resources
-bundle_xhyve
+if [ "$uname_m" = "x86_64" ]; then
+  install_xhyve
+  bundle_xhyve
+fi
 bundle_qemu
