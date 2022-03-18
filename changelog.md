@@ -5,7 +5,7 @@
 ### New/Changed Features:
 
 * Bump QEMU to 6.2.0
-* The CI script can not be used on Apple Silicon
+* The CI script can now be used on Apple Silicon
 
 ## 0.3.1
 
