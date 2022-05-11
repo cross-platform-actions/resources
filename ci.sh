@@ -81,6 +81,7 @@ install_prerequisite() {
       make \
       musl-dev \
       ninja \
+      ovmf \
       perl \
       pixman-dev \
       pixman-static \
@@ -199,6 +200,12 @@ bundle_xhyve() {
   rm -rf work
 }
 
+bundle_uefi() {
+  [ $system = macos ] && return
+  local firmware_target_dir="$1"
+  cp /usr/share/OVMF/OVMF.fd "$firmware_target_dir"
+}
+
 bundle_qemu() {
   local target_dir='work/qemus'
   mkdir -p "$target_dir"
@@ -216,6 +223,8 @@ bundle_qemu() {
       rm -f qemu/pc-bios/edk2-aarch64-code.fd
       bzip2 -d qemu/pc-bios/edk2-aarch64-code.fd.bz2
     fi
+
+    bundle_uefi "$firmware_target_dir"
     cp "qemu/build/$qemu_name" "$qemu_target_dir/qemu"
     cp "${firms[@]/#/qemu/}" "$firmware_target_dir"
     tar -C "$platform_dir" -c -f "$qemu_name-$system.tar" .
