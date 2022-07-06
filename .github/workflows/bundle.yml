@@ -20,11 +20,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Bash
-        run: apk add --no-cache bash ruby ruby-minitest
+      - name: Install Ruby
+        run: apk add --no-cache ruby ruby-bundler ruby-minitest
 
       - name: Run CI Script
-        run: ./ci.sh
+        run: ./ci.rb
 
       - name: Run Tests
         run: ./test.rb
@@ -54,9 +54,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Bash
-        run: brew install bash
-
       - name: Extract bhyve UEFI firmware
         uses: cross-platform-actions/action@v0.4.0
         with:
@@ -68,7 +65,7 @@ jobs:
             cp /usr/local/share/uefi-firmware/BHYVE_UEFI.fd uefi.fd
 
       - name: Run CI Script
-        run: ./ci.sh
+        run: ./ci.rb
 
       - name: Run Tests
         run: ./test.rb
