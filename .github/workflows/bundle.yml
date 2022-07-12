@@ -21,10 +21,13 @@ jobs:
           persist-credentials: false
 
       - name: Install Bash
-        run: apk add --no-cache bash
+        run: apk add --no-cache bash ruby ruby-minitest
 
       - name: Run CI Script
         run: ./ci.sh
+
+      - name: Run Tests
+        run: ./test.rb
 
       - name: Extract Version
         id: version
@@ -66,6 +69,9 @@ jobs:
 
       - name: Run CI Script
         run: ./ci.sh
+
+      - name: Run Tests
+        run: ./test.rb
 
       - name: Extract Version
         id: version
