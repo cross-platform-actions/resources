@@ -61,7 +61,7 @@ jobs:
           version: '13.0'
           run: |
             sudo pkg update
-            sudo pkg install -y uefi-edk2-bhyve
+            sudo pkg install -y edk2-bhyve
             cp /usr/local/share/uefi-firmware/BHYVE_UEFI.fd uefi.fd
 
       - name: Run CI Script

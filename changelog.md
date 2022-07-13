@@ -1,5 +1,11 @@
 # Resources Changelog
 
+## 0.5.1
+
+### Bugs Fixed:
+
+* Bundling of Bhyve UEFI firmware
+
 ## 0.4.0
 
 ### New/Changed Features:
