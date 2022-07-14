@@ -6,6 +6,12 @@
 
 * Bundling of Bhyve UEFI firmware
 
+## 0.5.0
+
+### New/Changed Features
+
+* Bundle QEMU EFI firmware
+
 ## 0.4.0
 
 ### New/Changed Features:
