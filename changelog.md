@@ -1,5 +1,11 @@
 # Resources Changelog
 
+## Unreleased
+
+### New/Changed Features
+
+* Add support for ARM64 as a target architecture
+
 ## 0.5.1
 
 ### Bugs Fixed:

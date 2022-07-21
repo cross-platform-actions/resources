@@ -2,41 +2,145 @@
 
 require "bundler"
 require "fileutils"
+require "open-uri"
 
 class Qemu
   # Version of QEMU to bundle
   VERSION = "6.2.0"
 
-  # Specifies which QEMU architectures to bundle for a given host architecture.
-  ENABLED_ARCHITECTURES = {
-    x86_64: %i[x86_64],
-    arm64: %i[aarch64]
-  }.freeze
-
   # Map of canonicalized host architectures
   ALIASES = {
-    aarch64: :arm6
+    aarch64: :arm64
   }.freeze
 
-  # Firmeware to bundle for each QEMU architecture
-  FIRMWARES = {
-    x86_64: %w[
+  # Interface to access which firmeware to bundle for each QEMU architecture
+  class Architecture
+    def initialize(qemu)
+      @qemu = qemu
+    end
+
+    def name
+      self.class.name.split("::").last.downcase
+    end
+
+    def bundle
+      download_external_firmwares
+      qemu_target_dir = File.join(architecture_directory, "bin")
+
+      FileUtils.mkdir_p qemu_target_dir
+
+      if File.exist?("qemu/pc-bios/edk2-aarch64-code.fd.bz2")
+        FileUtils.rm_f "qemu/pc-bios/edk2-aarch64-code.fd"
+        execute "bzip2", "-d", "qemu/pc-bios/edk2-aarch64-code.fd.bz2"
+      end
+
+      FileUtils.mkdir_p firmware_target_dirctory
+      bundle_uefi
+      FileUtils.cp File.join("qemu", "build", qemu_name), File.join(qemu_target_dir, "qemu")
+      FileUtils.cp(firmwares.map { File.join("qemu", _1) }, firmware_target_dirctory)
+      execute "tar", "-C", architecture_directory, "-c", "-f", "#{qemu_name}-#{ci_runner.os_name}.tar", "."
+    end
+
+    def firmware_target_dirctory
+      File.join(architecture_directory, "share", "qemu")
+    end
+
+    private
+
+    attr_reader :qemu
+
+    def ci_runner
+      qemu.ci_runner
+    end
+
+    def target_directory
+      qemu.target_directory
+    end
+
+    def architecture_directory
+      File.join(target_directory, qemu_name)
+    end
+
+    def qemu_name
+      "qemu-system-#{name}"
+    end
+  end
+
+  class X86_64 < Architecture
+    FIRMWARES = %w[
       pc-bios/bios-256k.bin
       pc-bios/efi-e1000.rom
       pc-bios/efi-virtio.rom
       pc-bios/kvmvapic.bin
       pc-bios/vgabios-stdvga.bin
-    ],
+    ].freeze
 
-    aarch64: %w[
-      pc-bios/efi-e1000.rom
-      pc-bios/efi-virtio.rom
-      pc-bios/edk2-aarch64-code.fd
-    ]
+    private_constant :FIRMWARES
+
+    def firmwares
+      FIRMWARES
+    end
+
+    def bundle_uefi
+      ci_runner.bundle_uefi(firmware_target_dirctory)
+    end
+
+    def download_external_firmwares
+      # noop
+    end
+  end
+
+  class Arm64 < Architecture
+    FIRMWARES = {
+      qemu: %w[
+        pc-bios/efi-e1000.rom
+        pc-bios/efi-virtio.rom
+        pc-bios/edk2-aarch64-code.fd
+      ],
+
+      external: {
+        "http://releases.linaro.org/components/kernel/uefi-linaro/16.02/release/qemu64/QEMU_EFI.fd" => "uefi.fd"
+      }
+    }.freeze
+
+    private_constant :FIRMWARES
+
+    def name
+      "aarch64"
+    end
+
+    def firmwares
+      FIRMWARES[:qemu]
+    end
+
+    def bundle_uefi
+      # noop
+    end
+
+    def download_external_firmwares
+      FIRMWARES[:external].each do |url, name|
+        FileUtils.mkdir_p firmware_target_dirctory
+        target_path = File.join(firmware_target_dirctory, name)
+
+        download_file(url, target_path)
+      end
+    end
+  end
+
+  # Specifies which QEMU architectures to bundle for a given host architecture.
+  ENABLED_ARCHITECTURES = {
+    x86_64: [X86_64, Arm64],
+    arm64: [Arm64]
   }.freeze
+
+  attr_reader :ci_runner
 
   def initialize(ci_runner)
     @ci_runner = ci_runner
+  end
+
+  def target_directory
+    "work/qemus"
   end
 
   def fetch
@@ -50,7 +154,7 @@ class Qemu
     FileUtils.mkdir_p "qemu/build"
 
     Dir.chdir "qemu/build" do
-      target_list = enabled_architectures.map { "#{_1}-softmmu" }.join(",")
+      target_list = enabled_architectures.map { "#{_1.name}-softmmu" }.join(",")
       target_list_arg = "--target-list=" + target_list
       args = %w[
         --prefix=/tmp/cross-platform-actions
@@ -105,37 +209,15 @@ class Qemu
   end
 
   def bundle
-    target_dir = "work/qemus"
-    FileUtils.mkdir_p target_dir
-
-    enabled_architectures.each do |platform|
-      firmwares = Qemu::FIRMWARES[platform]
-      qemu_name = "qemu-system-#{platform}"
-      platform_dir = File.join(target_dir, qemu_name)
-      firmware_target_dir = File.join(platform_dir, "share", "qemu")
-      qemu_target_dir = File.join(platform_dir, "bin")
-
-      FileUtils.mkdir_p firmware_target_dir
-      FileUtils.mkdir_p qemu_target_dir
-
-      if File.exist?("qemu/pc-bios/edk2-aarch64-code.fd.bz2")
-        FileUtils.rm_f "qemu/pc-bios/edk2-aarch64-code.fd"
-        execute "bzip2", "-d", "qemu/pc-bios/edk2-aarch64-code.fd.bz2"
-      end
-
-      ci_runner.bundle_uefi(firmware_target_dir)
-      FileUtils.cp File.join("qemu", "build", qemu_name), File.join(qemu_target_dir, "qemu")
-      FileUtils.cp(firmwares.map { File.join("qemu", _1) }, firmware_target_dir)
-      execute "tar", "-C", platform_dir, "-c", "-f", "#{qemu_name}-#{ci_runner.os_name}.tar", "."
-    end
+    FileUtils.mkdir_p target_directory
+    enabled_architectures.each(&:bundle)
   end
 
   private
 
-  attr_reader :ci_runner
-
   def enabled_architectures
-    ci_runner.enabled_architectures
+    @enabled_architectures ||=
+      ci_runner.enabled_architectures.map { _1.new(self) }
   end
 end
 
@@ -325,7 +407,7 @@ class CIRunner
     end
 
     def bundle_uefi(firmware_target_dir)
-      FileUtils.cp "/usr/share/OVMF/OVMF.fd", firmware_target_dir
+      FileUtils.cp "/usr/share/OVMF/OVMF.fd", File.join(firmware_target_dir, "uefi.fd")
     end
 
     class Qemu < Host::Qemu
@@ -365,6 +447,12 @@ end
 def execute(*args, env: {})
   env = env.map { |k, v| [k.to_s, v.to_s] }.to_h
   Kernel.system env, *args, exception: true
+end
+
+def download_file(url, destination)
+  URI.open(url) do |uri|
+    File.open(destination, 'w') { _1.write(uri.read) }
+  end
 end
 
 CIRunner.new.run
