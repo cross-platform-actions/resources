@@ -2,6 +2,8 @@
 
 require "bundler"
 require "fileutils"
+require "net/http"
+require "uri"
 
 class Qemu
   # Version of QEMU to bundle
@@ -9,7 +11,7 @@ class Qemu
 
   # Specifies which QEMU architectures to bundle for a given host architecture.
   ENABLED_ARCHITECTURES = {
-    x86_64: %i[x86_64],
+    x86_64: %i[aarch64],
     arm64: %i[aarch64]
   }.freeze
 
@@ -20,19 +22,27 @@ class Qemu
 
   # Firmeware to bundle for each QEMU architecture
   FIRMWARES = {
-    x86_64: %w[
-      pc-bios/bios-256k.bin
-      pc-bios/efi-e1000.rom
-      pc-bios/efi-virtio.rom
-      pc-bios/kvmvapic.bin
-      pc-bios/vgabios-stdvga.bin
-    ],
+    x86_64: {
+      qemu: %w[
+        pc-bios/bios-256k.bin
+        pc-bios/efi-e1000.rom
+        pc-bios/efi-virtio.rom
+        pc-bios/kvmvapic.bin
+        pc-bios/vgabios-stdvga.bin
+      ]
+    },
 
-    aarch64: %w[
-      pc-bios/efi-e1000.rom
-      pc-bios/efi-virtio.rom
-      pc-bios/edk2-aarch64-code.fd
-    ]
+    aarch64: {
+      qemu: %w[
+        pc-bios/efi-e1000.rom
+        pc-bios/efi-virtio.rom
+        pc-bios/edk2-aarch64-code.fd
+      ],
+
+      external: {
+        "http://releases.linaro.org/components/kernel/uefi-linaro/16.02/release/qemu64/QEMU_EFI.fd" => "uefi.fd"
+      }
+    }
   }.freeze
 
   def initialize(ci_runner)
@@ -105,17 +115,16 @@ class Qemu
   end
 
   def bundle
-    target_dir = "work/qemus"
-    FileUtils.mkdir_p target_dir
+    FileUtils.mkdir_p target_directory
+    download_external_firmwares
 
     enabled_architectures.each do |platform|
-      firmwares = Qemu::FIRMWARES[platform]
-      qemu_name = "qemu-system-#{platform}"
-      platform_dir = File.join(target_dir, qemu_name)
-      firmware_target_dir = File.join(platform_dir, "share", "qemu")
-      qemu_target_dir = File.join(platform_dir, "bin")
+      qemu_name = self.qemu_name(platform)
+      qemu_firmwares = Qemu::FIRMWARES[platform][:qemu]
+      architecture_directory = self.architecture_directory(qemu_name)
+      firmware_target_dirctory = self.firmware_target_dirctory(platform)
+      qemu_target_dir = File.join(architecture_directory, "bin")
 
-      FileUtils.mkdir_p firmware_target_dir
       FileUtils.mkdir_p qemu_target_dir
 
       if File.exist?("qemu/pc-bios/edk2-aarch64-code.fd.bz2")
@@ -123,10 +132,11 @@ class Qemu
         execute "bzip2", "-d", "qemu/pc-bios/edk2-aarch64-code.fd.bz2"
       end
 
-      ci_runner.bundle_uefi(firmware_target_dir)
+      FileUtils.mkdir_p firmware_target_dirctory
+      ci_runner.bundle_uefi(firmware_target_dirctory)
       FileUtils.cp File.join("qemu", "build", qemu_name), File.join(qemu_target_dir, "qemu")
-      FileUtils.cp(firmwares.map { File.join("qemu", _1) }, firmware_target_dir)
-      execute "tar", "-C", platform_dir, "-c", "-f", "#{qemu_name}-#{ci_runner.os_name}.tar", "."
+      FileUtils.cp(qemu_firmwares.map { File.join("qemu", _1) }, firmware_target_dirctory)
+      execute "tar", "-C", architecture_directory, "-c", "-f", "#{qemu_name}-#{ci_runner.os_name}.tar", "."
     end
   end
 
@@ -134,8 +144,45 @@ class Qemu
 
   attr_reader :ci_runner
 
+  def target_directory
+    "work/qemus"
+  end
+
+  def firmware_target_dirctory(architecture)
+    qemu_name = self.qemu_name(architecture)
+    architecture_directory = self.architecture_directory(qemu_name)
+    File.join(architecture_directory, "share", "qemu")
+  end
+
+  def architecture_directory(qemu_name)
+    File.join(target_directory, qemu_name)
+  end
+
+  def qemu_name(architecture)
+    "qemu-system-#{architecture}"
+  end
+
   def enabled_architectures
     ci_runner.enabled_architectures
+  end
+
+  def external_firmwares
+    @external_firmwares ||= enabled_architectures
+      .map { [_1, FIRMWARES[_1][:external]] }
+      .filter { |_, firmware| !firmware.nil? }
+      .to_h
+  end
+
+  def download_external_firmwares
+    external_firmwares.each do |architecture, firmwares|
+      firmwares.each do |url, name|
+        firmware_target_dirctory = self.firmware_target_dirctory(architecture)
+        FileUtils.mkdir_p firmware_target_dirctory
+        target_path = File.join(firmware_target_dirctory, name)
+
+        download_file(url, target_path)
+      end
+    end
   end
 end
 
@@ -365,6 +412,20 @@ end
 def execute(*args, env: {})
   env = env.map { |k, v| [k.to_s, v.to_s] }.to_h
   Kernel.system env, *args, exception: true
+end
+
+def download_file(url, destination)
+  uri = URI(url)
+
+  Net::HTTP.start(uri.host, uri.port) do |http|
+    request = Net::HTTP::Get.new(uri)
+
+    http.request(request) do |response|
+      open(destination, 'w') do |io|
+        response.read_body { io.write(_1) }
+      end
+    end
+  end
 end
 
 CIRunner.new.run
