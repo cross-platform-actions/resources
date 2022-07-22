@@ -28,7 +28,7 @@ describe "resources" do
 
     describe "arm64" do
       it "contains the correct file structure for arm64" do
-        assert_qemu_system "x86_64", firmwares: %w[
+        assert_qemu_system "arm64", firmwares: %w[
           efi-e1000.rom
           efi-virtio.rom
           edk2-aarch64-code.fd
