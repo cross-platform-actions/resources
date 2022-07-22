@@ -11,7 +11,7 @@ class Qemu
 
   # Specifies which QEMU architectures to bundle for a given host architecture.
   ENABLED_ARCHITECTURES = {
-    x86_64: %i[aarch64],
+    x86_64: %i[x86_64 aarch64],
     arm64: %i[aarch64]
   }.freeze
 

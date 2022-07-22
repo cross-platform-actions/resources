@@ -12,19 +12,19 @@ end
 
 describe "resources" do
   describe "qemu-system" do
-    # describe "x86_64" do
-    #   it "contains the correct file structure for x86_64" do
-    #     uefi = Gem::Platform.local.os == "darwin" ? [] : ["OVMF.fd"]
-    #
-    #     assert_qemu_system "x86_64", firmwares: %w[
-    #       bios-256k.bin
-    #       efi-e1000.rom
-    #       efi-virtio.rom
-    #       kvmvapic.bin
-    #       vgabios-stdvga.bin
-    #     ].concat(uefi)
-    #   end
-    # end
+    describe "x86_64" do
+      it "contains the correct file structure for x86_64" do
+        uefi = Gem::Platform.local.os == "darwin" ? [] : ["OVMF.fd"]
+
+        assert_qemu_system "x86_64", firmwares: %w[
+          bios-256k.bin
+          efi-e1000.rom
+          efi-virtio.rom
+          kvmvapic.bin
+          vgabios-stdvga.bin
+        ].concat(uefi)
+      end
+    end
 
     describe "arm64" do
       it "contains the correct file structure for arm64" do
