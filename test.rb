@@ -59,6 +59,14 @@ class QemuSystemValidator
     @tar_file ||= TarFile.for(architecture: architecture, host_os: host_os)
   end
 
+  def extra
+    @extra ||= tar_file.firmwares - firmwares
+  end
+
+  def missing
+    @missing ||= firmwares - tar_file.firmwares
+  end
+
   private
 
   attr_reader :architecture
@@ -68,7 +76,7 @@ class QemuSystemValidator
   end
 
   def firmware_maching?
-    firmwares.all? { tar_file.firmwares.include?(_1) }
+    extra.empty? && missing.empty?
   end
 
   def message_formatter
@@ -138,12 +146,12 @@ class QemuSystemValidator
     end
 
     def format
-      expected.concat(actual).join("\n")
+      expected.concat([""], actual, [""], diff).join("\n")
     end
 
     private
 
-    def_delegators :@validator, :tar_file, :firmwares
+    def_delegators :@validator, :tar_file, :firmwares, :missing, :extra
 
     def expected
       [
@@ -157,14 +165,29 @@ class QemuSystemValidator
       ["Actual:"] + tar_file.paths
     end
 
+    def diff
+      missing = to_full_path(self.missing)
+      extra = to_full_path(self.extra)
+
+      diff = to_full_path(firmwares)
+        .concat(to_full_path(tar_file.firmwares))
+        .uniq
+        .map { missing.include?(_1) ? "-#{_1}" : _1 }
+        .map { extra.include?(_1) ? "+#{_1}" : _1 }
+
+      ["Diff:"] + diff
+    end
+
     def binary_message
       tar_file.qemu_binary
     end
 
     def firmware_message
-      firmwares
-        .map { File.join(tar_file.firmware_directory, _1) }
-        .join("\n")
+      to_full_path(firmwares).join("\n")
+    end
+
+    def to_full_path(array)
+      array.map { File.join(tar_file.firmware_directory, _1) }
     end
   end
 end
