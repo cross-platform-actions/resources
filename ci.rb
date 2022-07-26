@@ -325,6 +325,7 @@ class CIRunner
           "-liconv",
           "-lpcre",
           "-lresolv",
+          "-dead_strip",
           "#{brew_prefix}/opt/gettext/lib/libintl.a",
           "#{brew_prefix}/opt/glib/lib/libgio-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libglib-2.0.a",
@@ -416,7 +417,7 @@ class CIRunner
       end
 
       def ldflags
-        ""
+        "-s"
       end
     end
 

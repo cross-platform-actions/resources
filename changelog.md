@@ -5,6 +5,7 @@
 ### New/Changed Features
 
 * Add support for ARM64 as a target architecture
+* Strip binaries to save space
 
 ## 0.5.1
 
