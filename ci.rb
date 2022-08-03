@@ -96,11 +96,7 @@ class Qemu
         pc-bios/efi-e1000.rom
         pc-bios/efi-virtio.rom
         pc-bios/edk2-aarch64-code.fd
-      ],
-
-      external: {
-        "http://releases.linaro.org/components/kernel/uefi-linaro/16.02/release/qemu64/QEMU_EFI.fd" => "uefi.fd"
-      }
+      ]
     }.freeze
 
     private_constant :FIRMWARES
@@ -115,15 +111,6 @@ class Qemu
 
     def bundle_uefi
       # noop
-    end
-
-    def download_external_firmwares
-      FIRMWARES[:external].each do |url, name|
-        FileUtils.mkdir_p firmware_target_dirctory
-        target_path = File.join(firmware_target_dirctory, name)
-
-        download_file(url, target_path)
-      end
     end
   end
 
