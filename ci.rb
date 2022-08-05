@@ -24,25 +24,22 @@ class Qemu
     end
 
     def bundle
-      download_external_firmwares
       qemu_target_dir = File.join(architecture_directory, "bin")
 
       FileUtils.mkdir_p qemu_target_dir
-
-      if File.exist?("qemu/pc-bios/edk2-aarch64-code.fd.bz2")
-        FileUtils.rm_f "qemu/pc-bios/edk2-aarch64-code.fd"
-        execute "bzip2", "-d", "qemu/pc-bios/edk2-aarch64-code.fd.bz2"
-      end
-
       FileUtils.mkdir_p firmware_target_dirctory
       bundle_uefi
       FileUtils.cp File.join("qemu", "build", qemu_name), File.join(qemu_target_dir, "qemu")
-      FileUtils.cp(firmwares.map { File.join("qemu", _1) }, firmware_target_dirctory)
+      FileUtils.cp(firmwares.map { File.join(firmware_source_dirctory, _1) }, firmware_target_dirctory)
       execute "tar", "-C", architecture_directory, "-c", "-f", "#{qemu_name}-#{ci_runner.os_name}.tar", "."
     end
 
     def firmware_target_dirctory
       File.join(architecture_directory, "share", "qemu")
+    end
+
+    def firmware_source_dirctory
+      @firmware_source_dirctory ||= File.join("qemu", "pc-bios")
     end
 
     private
@@ -68,11 +65,11 @@ class Qemu
 
   class X86_64 < Architecture
     FIRMWARES = %w[
-      pc-bios/bios-256k.bin
-      pc-bios/efi-e1000.rom
-      pc-bios/efi-virtio.rom
-      pc-bios/kvmvapic.bin
-      pc-bios/vgabios-stdvga.bin
+      bios-256k.bin
+      efi-e1000.rom
+      efi-virtio.rom
+      kvmvapic.bin
+      vgabios-stdvga.bin
     ].freeze
 
     private_constant :FIRMWARES
@@ -84,18 +81,13 @@ class Qemu
     def bundle_uefi
       ci_runner.bundle_uefi(firmware_target_dirctory)
     end
-
-    def download_external_firmwares
-      # noop
-    end
   end
 
   class Arm64 < Architecture
     FIRMWARES = {
       qemu: %w[
-        pc-bios/efi-e1000.rom
-        pc-bios/efi-virtio.rom
-        pc-bios/edk2-aarch64-code.fd
+        efi-e1000.rom
+        efi-virtio.rom
       ]
     }.freeze
 
@@ -110,7 +102,31 @@ class Qemu
     end
 
     def bundle_uefi
-      # noop
+      unpack_uefi
+      FileUtils.mkdir_p firmware_target_dirctory
+      FileUtils.cp(uefi_source_path, uefi_target_path)
+
+      File.open(uefi_target_path, File::RDWR) do |file|
+        file.truncate(file.read.bytes.rindex { _1 != 0 })
+      end
+    end
+
+    private
+
+    def uefi_target_path
+      @uefi_target_path ||= File.join(firmware_target_dirctory, "uefi.fd")
+    end
+
+    def uefi_source_path
+      @ueif_path ||= File.join(firmware_source_dirctory, "edk2-aarch64-code.fd")
+    end
+
+    def unpack_uefi
+      archive = uefi_source_path + ".bz2"
+      return unless File.exist?(archive)
+
+      FileUtils.rm_f uefi_source_path
+      execute "bzip2", "-d", archive
     end
   end
 
