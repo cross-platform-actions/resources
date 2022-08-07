@@ -84,12 +84,10 @@ class Qemu
   end
 
   class Arm64 < Architecture
-    FIRMWARES = {
-      qemu: %w[
-        efi-e1000.rom
-        efi-virtio.rom
-      ]
-    }.freeze
+    FIRMWARES = %w[
+      efi-e1000.rom
+      efi-virtio.rom
+    ].freeze
 
     private_constant :FIRMWARES
 
@@ -98,7 +96,7 @@ class Qemu
     end
 
     def firmwares
-      FIRMWARES[:qemu]
+      FIRMWARES
     end
 
     def bundle_uefi
