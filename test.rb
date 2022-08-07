@@ -31,7 +31,6 @@ describe "resources" do
         assert_qemu_system "aarch64", firmwares: %w[
           efi-e1000.rom
           efi-virtio.rom
-          edk2-aarch64-code.fd
           uefi.fd
         ]
       end
