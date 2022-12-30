@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.6.0
+
 ### New/Changed Features
 
 * Add support for ARM64 as a target architecture
