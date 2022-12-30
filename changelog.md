@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New/Changed Features
+
+* Bundle Linaro UEFI for ARM64
+
 ## 0.6.0
 
 ### New/Changed Features

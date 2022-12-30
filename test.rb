@@ -32,6 +32,7 @@ describe "resources" do
           efi-e1000.rom
           efi-virtio.rom
           uefi.fd
+          linaro_uefi.fd
         ]
       end
     end

@@ -107,6 +107,8 @@ class Qemu
       File.open(uefi_target_path, File::RDWR) do |file|
         file.truncate(file.read.bytes.rindex { _1 != 0 })
       end
+
+      bundle_linaro_uefi
     end
 
     private
@@ -116,7 +118,7 @@ class Qemu
     end
 
     def uefi_source_path
-      @ueif_path ||= File.join(firmware_source_dirctory, "edk2-aarch64-code.fd")
+      @uefi_source_path ||= File.join(firmware_source_dirctory, "edk2-aarch64-code.fd")
     end
 
     def unpack_uefi
@@ -125,6 +127,19 @@ class Qemu
 
       FileUtils.rm_f uefi_source_path
       execute "bzip2", "-d", archive
+    end
+
+    def bundle_linaro_uefi
+      download_file(linaro_uefi_url, linaro_uefi_target_path)
+    end
+
+    def linaro_uefi_url
+      "https://releases.linaro.org/components/kernel/uefi-linaro/latest/release/qemu64/QEMU_EFI.fd"
+    end
+
+    def linaro_uefi_target_path
+      @linaro_uefi_target_path ||=
+        File.join(firmware_target_dirctory, "linaro_uefi.fd")
     end
   end
 
