@@ -371,6 +371,7 @@ class CIRunner
 
       def bundle
         FileUtils.mkdir_p "work/bin"
+        download_bhyve_uefi
         FileUtils.mv "uefi.fd", "work" if ENV.key?("GITHUB_ACTIONS")
         FileUtils.cp Bundler.which("xhyve"), "work/bin"
 
@@ -385,6 +386,18 @@ class CIRunner
       private
 
       attr_reader :host
+
+      def download_bhyve_uefi
+        work_dir = File.join(Dir.pwd, "work")
+
+        Dir.mktmpdir do |dir|
+          Dir.chdir(dir) do
+            download_file("https://github.com/cross-platform-actions/resources/releases/download/v0.6.0/xhyve-macos.tar", "xhyve.tar")
+            execute "tar", "xf", "xhyve.tar"
+            FileUtils.mv "uefi.fd", work_dir
+          end
+        end
+      end
     end
 
     private_constant :Xhyve

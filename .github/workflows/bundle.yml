@@ -54,16 +54,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Extract bhyve UEFI firmware
-        uses: cross-platform-actions/action@v0.4.0
-        with:
-          operating_system: freebsd
-          version: '13.0'
-          run: |
-            sudo pkg update
-            sudo pkg install -y edk2-bhyve
-            cp /usr/local/share/uefi-firmware/BHYVE_UEFI.fd uefi.fd
-
       - name: Run CI Script
         run: ./ci.rb
 
