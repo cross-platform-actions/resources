@@ -3,6 +3,7 @@
 require "bundler"
 require "fileutils"
 require "open-uri"
+require "tmpdir"
 
 class Qemu
   # Version of QEMU to bundle
@@ -339,7 +340,6 @@ class CIRunner
         @ldflags ||= [
           "-framework", "Foundation",
           "-liconv",
-          "-lpcre",
           "-lresolv",
           "-dead_strip",
           "#{brew_prefix}/opt/gettext/lib/libintl.a",
@@ -347,7 +347,8 @@ class CIRunner
           "#{brew_prefix}/opt/glib/lib/libglib-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libgmodule-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libgobject-2.0.a",
-          "#{brew_prefix}/opt/pixman/lib/libpixman-1.a"
+          "#{brew_prefix}/opt/pixman/lib/libpixman-1.a",
+          "#{brew_prefix}/lib/libpcre2-8.a"
         ].join(" ")
       end
 
@@ -371,8 +372,7 @@ class CIRunner
 
       def bundle
         FileUtils.mkdir_p "work/bin"
-        download_bhyve_uefi
-        FileUtils.mv "uefi.fd", "work" if ENV.key?("GITHUB_ACTIONS")
+        bundle_bhyve_uefi
         FileUtils.cp Bundler.which("xhyve"), "work/bin"
 
         xhyve_brew_path = `brew --cellar xhyve`.strip
@@ -387,7 +387,7 @@ class CIRunner
 
       attr_reader :host
 
-      def download_bhyve_uefi
+      def bundle_bhyve_uefi
         work_dir = File.join(Dir.pwd, "work")
 
         Dir.mktmpdir do |dir|
