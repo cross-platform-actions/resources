@@ -5,6 +5,7 @@
 ### New/Changed Features
 
 * Bundle Linaro UEFI for ARM64
+* Bump QEMU to 7.2.0
 
 ## 0.6.0
 

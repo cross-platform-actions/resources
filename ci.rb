@@ -7,7 +7,7 @@ require "tmpdir"
 
 class Qemu
   # Version of QEMU to bundle
-  VERSION = "6.2.0"
+  VERSION = "7.2.0"
 
   # Map of canonicalized host architectures
   ALIASES = {
@@ -169,6 +169,7 @@ class Qemu
 
   def build
     FileUtils.mkdir_p "qemu/build"
+    libslirp.build
 
     Dir.chdir "qemu/build" do
       target_list = enabled_architectures.map { "#{_1.name}-softmmu" }.join(",")
@@ -198,10 +199,12 @@ class Qemu
         --disable-linux-user
         --disable-nettle
         --disable-parallels
+        --disable-png
         --disable-qcow1
         --disable-qed
         --disable-replication
         --disable-sdl
+        --disable-sdl-image
         --disable-smartcard
         --disable-snappy
         --disable-usb-redir
@@ -214,15 +217,17 @@ class Qemu
         --disable-lzo
         --disable-zstd
         --enable-lto
-        --enable-slirp=git
+        --enable-slirp
         --enable-tools
       ].append(target_list_arg)
        .concat(ci_runner.qemu_build_flags)
 
-      execute "../configure", *args, env: { LDFLAGS: ci_runner.qemu_ldflags }
+      execute "../configure", *args, env: { LDFLAGS: ldflags }
       execute "make"
       execute "ls", "-lh"
     end
+  ensure
+    libslirp.cleanup
   end
 
   def bundle
@@ -232,9 +237,56 @@ class Qemu
 
   private
 
+  def ldflags
+    ci_runner.qemu_ldflags.concat(libslirp.ldflags).join(" ")
+  end
+
+  def libslirp
+    @libslirp ||= Libslirp.new
+  end
+
   def enabled_architectures
     @enabled_architectures ||=
       ci_runner.enabled_architectures.map { _1.new(self) }
+  end
+
+  class Libslirp
+    def build
+      Dir.chdir(temp_dir) do
+        fetch
+        _build
+      end
+    end
+
+    def ldflags
+      [File.join(target_path, "build", "libslirp.a")]
+    end
+
+    def cleanup
+      FileUtils.remove_entry(temp_dir)
+    end
+
+    private
+
+    def temp_dir
+      @temp_dir ||= Dir.mktmpdir
+    end
+
+    def target_path
+      @target_path ||= File.join(temp_dir, "libslirp-master")
+    end
+
+    def fetch
+      download_file("https://gitlab.com/qemu-project/libslirp/-/archive/master/libslirp-master.tar", "libslirp.tar")
+      execute "tar", "-xf", "libslirp.tar"
+    end
+
+    def _build
+      Dir.chdir(target_path) do
+        execute "meson", "setup", "-Ddefault_library=static", "build"
+        execute "ninja", "-C", "build", "install"
+      end
+    end
   end
 end
 
@@ -324,7 +376,7 @@ class CIRunner
     end
 
     def install_prerequisite
-      packages = %w[ninja pixman glib]
+      packages = %w[ninja pixman glib meson]
       execute "brew", "install", *packages, env: { HOMEBREW_NO_INSTALL_CLEANUP: true }
     end
 
@@ -338,18 +390,21 @@ class CIRunner
 
       def ldflags
         @ldflags ||= [
+          "-dead_strip",
           "-framework", "Foundation",
+          "-framework", "Cocoa",
+          '-lffi',
           "-liconv",
           "-lresolv",
-          "-dead_strip",
           "#{brew_prefix}/opt/gettext/lib/libintl.a",
           "#{brew_prefix}/opt/glib/lib/libgio-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libglib-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libgmodule-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libgobject-2.0.a",
           "#{brew_prefix}/opt/pixman/lib/libpixman-1.a",
-          "#{brew_prefix}/lib/libpcre2-8.a"
-        ].join(" ")
+          "#{brew_prefix}/lib/libpcre2-8.a",
+          "#{brew_prefix}/lib/libslirp.a"
+        ]
       end
 
       private
@@ -421,6 +476,7 @@ class CIRunner
         glib-dev
         glib-static
         make
+        meson
         musl-dev
         ninja
         ovmf
@@ -446,7 +502,7 @@ class CIRunner
       end
 
       def ldflags
-        "-s"
+        ["-s"]
       end
     end
 
