@@ -393,6 +393,7 @@ class CIRunner
           "-dead_strip",
           "-framework", "Foundation",
           "-framework", "Cocoa",
+          '-lffi',
           "-liconv",
           "-lresolv",
           "#{brew_prefix}/opt/gettext/lib/libintl.a",
