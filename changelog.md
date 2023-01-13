@@ -1,6 +1,6 @@
 # Resources Changelog
 
-## Unreleased
+## 0.7.0
 
 ### New/Changed Features
 
