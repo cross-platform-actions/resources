@@ -14,7 +14,7 @@ class Qemu
     aarch64: :arm64
   }.freeze
 
-  # Interface to access which firmeware to bundle for each QEMU architecture
+  # Interface to access which firmware to bundle for each QEMU architecture
   class Architecture
     def initialize(qemu)
       @qemu = qemu
@@ -28,19 +28,19 @@ class Qemu
       qemu_target_dir = File.join(architecture_directory, "bin")
 
       FileUtils.mkdir_p qemu_target_dir
-      FileUtils.mkdir_p firmware_target_dirctory
+      FileUtils.mkdir_p firmware_target_directory
       bundle_uefi
       FileUtils.cp File.join("qemu", "build", qemu_name), File.join(qemu_target_dir, "qemu")
-      FileUtils.cp(firmwares.map { File.join(firmware_source_dirctory, _1) }, firmware_target_dirctory)
+      FileUtils.cp(firmwares.map { File.join(firmware_source_directory, _1) }, firmware_target_directory)
       execute "tar", "-C", architecture_directory, "-c", "-f", "#{qemu_name}-#{ci_runner.os_name}.tar", "."
     end
 
-    def firmware_target_dirctory
+    def firmware_target_directory
       File.join(architecture_directory, "share", "qemu")
     end
 
-    def firmware_source_dirctory
-      @firmware_source_dirctory ||= File.join("qemu", "pc-bios")
+    def firmware_source_directory
+      @firmware_source_directory ||= File.join("qemu", "pc-bios")
     end
 
     private
@@ -80,7 +80,7 @@ class Qemu
     end
 
     def bundle_uefi
-      ci_runner.bundle_uefi(firmware_target_dirctory)
+      ci_runner.bundle_uefi(firmware_target_directory)
     end
   end
 
@@ -102,7 +102,7 @@ class Qemu
 
     def bundle_uefi
       unpack_uefi
-      FileUtils.mkdir_p firmware_target_dirctory
+      FileUtils.mkdir_p firmware_target_directory
       FileUtils.cp(uefi_source_path, uefi_target_path)
 
       File.open(uefi_target_path, File::RDWR) do |file|
@@ -115,11 +115,11 @@ class Qemu
     private
 
     def uefi_target_path
-      @uefi_target_path ||= File.join(firmware_target_dirctory, "uefi.fd")
+      @uefi_target_path ||= File.join(firmware_target_directory, "uefi.fd")
     end
 
     def uefi_source_path
-      @uefi_source_path ||= File.join(firmware_source_dirctory, "edk2-aarch64-code.fd")
+      @uefi_source_path ||= File.join(firmware_source_directory, "edk2-aarch64-code.fd")
     end
 
     def unpack_uefi
@@ -140,7 +140,7 @@ class Qemu
 
     def linaro_uefi_target_path
       @linaro_uefi_target_path ||=
-        File.join(firmware_target_dirctory, "linaro_uefi.fd")
+        File.join(firmware_target_directory, "linaro_uefi.fd")
     end
   end
 
