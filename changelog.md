@@ -1,5 +1,11 @@
 # Resources Changelog
 
+## Unreleased
+
+### New/Changed Features
+
+* Bump QEMU to 8.0.0
+
 ## 0.7.0
 
 ### New/Changed Features

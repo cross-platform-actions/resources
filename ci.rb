@@ -7,7 +7,7 @@ require "tmpdir"
 
 class Qemu
   # Version of QEMU to bundle
-  VERSION = "7.2.0"
+  VERSION = "8.0.0"
 
   # Map of canonicalized host architectures
   ALIASES = {
@@ -180,7 +180,6 @@ class Qemu
         --disable-bochs
         --disable-bsd-user
         --disable-cfi-debug
-        --disable-cocoa
         --disable-curses
         --disable-debug-info
         --disable-debug-mutex
@@ -396,6 +395,7 @@ class CIRunner
           '-lffi',
           "-liconv",
           "-lresolv",
+          "-lz",
           "#{brew_prefix}/opt/gettext/lib/libintl.a",
           "#{brew_prefix}/opt/glib/lib/libgio-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libglib-2.0.a",
