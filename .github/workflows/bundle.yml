@@ -16,7 +16,7 @@ jobs:
     container: alpine
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
 
@@ -47,10 +47,10 @@ jobs:
 
   build_qemu_macos:
     name: Build QEMU on macOS
-    runs-on: macos-10.15
+    runs-on: macos-11
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
 

@@ -48,7 +48,7 @@ class QemuSystemValidator
   end
 
   def valid?
-    @valid ||= qemu_binary? && firmware_maching?
+    @valid ||= qemu_binary? && firmware_matching?
   end
 
   def message
@@ -75,7 +75,7 @@ class QemuSystemValidator
     tar_file.qemu_binary.any?
   end
 
-  def firmware_maching?
+  def firmware_matching?
     extra.empty? && missing.empty?
   end
 
