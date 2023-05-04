@@ -222,7 +222,7 @@ class Qemu
        .concat(ci_runner.qemu_build_flags)
 
       execute "../configure", *args, env: { LDFLAGS: ldflags }
-      execute "make"
+      execute "make qemu-img qemu-system-aarch64 qemu-system-x86_64"
       execute "ls", "-lh"
     end
   ensure
@@ -395,7 +395,6 @@ class CIRunner
           '-lffi',
           "-liconv",
           "-lresolv",
-          "-lz",
           "#{brew_prefix}/opt/gettext/lib/libintl.a",
           "#{brew_prefix}/opt/glib/lib/libgio-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libglib-2.0.a",
