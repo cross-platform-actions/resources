@@ -4,7 +4,7 @@
 
 ### New/Changed Features
 
-* Bump QEMU to 8.0.0
+* Bump QEMU to 8.0.2
 
 ## 0.7.0
 
