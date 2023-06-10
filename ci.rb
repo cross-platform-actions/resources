@@ -2,6 +2,7 @@
 
 require "bundler"
 require "fileutils"
+require "open3"
 require "open-uri"
 require "tmpdir"
 
@@ -429,6 +430,7 @@ class CIRunner
         FileUtils.mkdir_p "work/bin"
         bundle_bhyve_uefi
         FileUtils.cp Bundler.which("xhyve"), "work/bin"
+        codesign
 
         xhyve_brew_path = `brew --cellar xhyve`.strip
         xhyve_version = `brew info xhyve --json | jq .[].installed[].version -r`.strip
@@ -440,7 +442,31 @@ class CIRunner
 
       private
 
+      ENTITLEMENT = <<~XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>com.apple.security.hypervisor</key>
+            <true/>
+        </dict>
+        </plist>
+      XML
+
       attr_reader :host
+
+      def codesign
+        Tempfile.open("entitlement") do |file|
+          file.write ENTITLEMENT
+          file.rewind
+
+          execute "codesign",
+            "-s", "-",
+            "--entitlements", file.path,
+            "--force",
+            "work/bin/xhyve"
+        end
+      end
 
       def bundle_bhyve_uefi
         work_dir = File.join(Dir.pwd, "work")
