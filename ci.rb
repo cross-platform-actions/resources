@@ -8,7 +8,7 @@ require "tmpdir"
 
 class Qemu
   # Version of QEMU to bundle
-  VERSION = "7.2.0"
+  VERSION = "8.0.2"
 
   # Map of canonicalized host architectures
   ALIASES = {
@@ -181,7 +181,6 @@ class Qemu
         --disable-bochs
         --disable-bsd-user
         --disable-cfi-debug
-        --disable-cocoa
         --disable-curses
         --disable-debug-info
         --disable-debug-mutex
@@ -224,7 +223,7 @@ class Qemu
        .concat(ci_runner.qemu_build_flags)
 
       execute "../configure", *args, env: { LDFLAGS: ldflags }
-      execute "make"
+      execute "make qemu-img qemu-system-aarch64 qemu-system-x86_64"
       execute "ls", "-lh"
     end
   ensure

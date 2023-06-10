@@ -172,7 +172,7 @@ build_qemu() {
     --target-list="$(join , "${qemu_platforms[@]/%/-softmmu}")" \
     $build_flags
 
-  make
+  make qemu-img qemu-system-aarch64 qemu-system-x86_64
   ls -lh
   popd > /dev/null
 }
