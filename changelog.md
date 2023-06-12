@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.8.0
+
 ### New/Changed Features
 
 * Bump QEMU to 8.0.2
