@@ -7,5 +7,6 @@ GitHub action.
 The following resources are bundled:
 
 * `qemu-img`
-* `qemu-system`
+* `qemu-system-aarch64`
+* `qemu-system-x86_64`
 * `xhyve` (on macOS)
