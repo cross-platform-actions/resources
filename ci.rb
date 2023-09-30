@@ -180,6 +180,7 @@ class Qemu
         --disable-auth-pam
         --disable-bochs
         --disable-bsd-user
+        --disable-capstone
         --disable-cfi-debug
         --disable-curses
         --disable-debug-info
