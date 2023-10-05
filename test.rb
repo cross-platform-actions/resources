@@ -39,6 +39,15 @@ def assert_only_system_dependencies(architecture)
   assert non_system_dependecies.empty?, %("#{qemu_path}" is linked with the following non-system dependencies:\n#{non_system_dependecies.join("\n")})
 end
 
+def assert_statically_linked(architecture)
+  return unless QemuSystemValidator.host_os == "linux"
+
+  qemu_path = qemu_path(architecture)
+  result = execute "file", qemu_path
+  statically_linked = result.include?("static-pie linked") || result.include?("statically linked")
+  assert statically_linked, %("#{qemu_path}" is not statically linked:\n#{result})
+end
+
 describe "resources" do
   describe "qemu-system" do
     describe "x86_64" do
@@ -57,6 +66,10 @@ describe "resources" do
       it "is only linked with system dependencies" do
         assert_only_system_dependencies "x86_64"
       end
+
+      it "is statically linked" do
+        assert_statically_linked "x86_64"
+      end
     end
 
     describe "arm64" do
@@ -71,6 +84,10 @@ describe "resources" do
 
       it "is only linked with system dependencies" do
         assert_only_system_dependencies "aarch64"
+      end
+
+      it "is statically linked" do
+        assert_statically_linked "aarch64"
       end
     end
   end

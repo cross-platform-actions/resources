@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Ruby
-        run: apk add --no-cache ruby ruby-bundler ruby-minitest
+        run: apk add --no-cache ruby ruby-bundler ruby-minitest file
 
       - name: Run CI Script
         run: ./ci.rb
