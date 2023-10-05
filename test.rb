@@ -2,19 +2,48 @@
 
 require "forwardable"
 require "minitest/autorun"
+require "open3"
 require "rubygems"
 require "rubygems/package"
+require "set"
+
+def execute(command, *args)
+  stdout, status = Open3.capture2(command, *args)
+  raise "Failed to executed command: #{command} #{args.join(' ')}" unless status.success?
+  stdout
+end
+
+def qemu_path(architecture)
+  "qemu/build/qemu-system-#{architecture}"
+end
 
 def assert_qemu_system(architecture, firmwares:)
   validator = QemuSystemValidator.new(architecture, firmwares)
   assert validator.valid?, validator.message
 end
 
+def assert_only_system_dependencies(architecture)
+  return unless QemuSystemValidator.host_os == "macos"
+
+  allowed_prefixes = Set.new ["/System/Library/Frameworks", "/usr/lib"]
+  qemu_path = qemu_path(architecture)
+  result = execute "otool", "-L", qemu_path
+
+  non_system_dependecies = result
+      .split("\n")
+      .drop(1)
+      .map(&:strip)
+      .reject { |path| allowed_prefixes.any? { path.start_with?(_1) } }
+      .map { _1.split.first }
+
+  assert non_system_dependecies.empty?, %("#{qemu_path}" is linked with the following non-system dependencies:\n#{non_system_dependecies.join("\n")})
+end
+
 describe "resources" do
   describe "qemu-system" do
     describe "x86_64" do
       it "contains the correct file structure for x86_64" do
-        uefi = Gem::Platform.local.os == "darwin" ? [] : ["uefi.fd"]
+        uefi = QemuSystemValidator.host_os == "macos" ? [] : ["uefi.fd"]
 
         assert_qemu_system "x86_64", firmwares: %w[
           bios-256k.bin
@@ -23,6 +52,10 @@ describe "resources" do
           kvmvapic.bin
           vgabios-stdvga.bin
         ].concat(uefi)
+      end
+
+      it "is only linked with system dependencies" do
+        assert_only_system_dependencies "x86_64"
       end
     end
 
@@ -35,6 +68,10 @@ describe "resources" do
           linaro_uefi.fd
         ]
       end
+
+      it "is only linked with system dependencies" do
+        assert_only_system_dependencies "aarch64"
+      end
     end
   end
 end
@@ -45,6 +82,17 @@ class QemuSystemValidator
   def initialize(architecture, firmwares)
     @architecture = architecture
     @firmwares = firmwares.sort
+  end
+
+  def self.host_os
+    @host_os ||= case Gem::Platform.local.os
+      when "darwin"
+        "macos"
+      when "linux"
+        "linux"
+      else
+        raise "Unsupported platform: #{Gem::Platform.local.os}"
+      end
   end
 
   def valid?
@@ -84,14 +132,7 @@ class QemuSystemValidator
   end
 
   def host_os
-    @host_os ||= case Gem::Platform.local.os
-      when "darwin"
-        "macos"
-      when "linux"
-        "linux"
-      else
-        raise "Unsupported platform: #{Gem::Platform.local.os}"
-      end
+    self.class.host_os
   end
 
   class TarFile
