@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.9.1
+
+### Bugs Fixed:
+
+* Disable `capstone`
+
 ## 0.9.0
 
 ### New/Changed Features

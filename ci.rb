@@ -180,6 +180,7 @@ class Qemu
         --disable-auth-pam
         --disable-bochs
         --disable-bsd-user
+        --disable-capstone
         --disable-cfi-debug
         --disable-curses
         --disable-debug-info
@@ -396,6 +397,7 @@ class CIRunner
           '-lffi',
           "-liconv",
           "-lresolv",
+          "#{brew_prefix}/opt/dtc/lib/libfdt.a",
           "#{brew_prefix}/opt/gettext/lib/libintl.a",
           "#{brew_prefix}/opt/glib/lib/libgio-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libglib-2.0.a",
