@@ -243,51 +243,12 @@ class Qemu
   end
 
   def libslirp
-    @libslirp ||= Libslirp.new
+    ci_runner.host.libslirp
   end
 
   def enabled_architectures
     @enabled_architectures ||=
       ci_runner.enabled_architectures.map { _1.new(self) }
-  end
-
-  class Libslirp
-    def build
-      Dir.chdir(temp_dir) do
-        fetch
-        _build
-      end
-    end
-
-    def ldflags
-      [File.join(target_path, "build", "libslirp.a")]
-    end
-
-    def cleanup
-      FileUtils.remove_entry(temp_dir)
-    end
-
-    private
-
-    def temp_dir
-      @temp_dir ||= Dir.mktmpdir
-    end
-
-    def target_path
-      @target_path ||= File.join(temp_dir, "libslirp-master")
-    end
-
-    def fetch
-      download_file("https://gitlab.com/qemu-project/libslirp/-/archive/master/libslirp-master.tar", "libslirp.tar")
-      execute "tar", "-xf", "libslirp.tar"
-    end
-
-    def _build
-      Dir.chdir(target_path) do
-        execute "meson", "setup", "-Ddefault_library=static", "build"
-        execute "ninja", "-C", "build", "install"
-      end
-    end
   end
 end
 
@@ -297,7 +258,6 @@ class CIRunner
     qemu.fetch
     qemu.build
     bundle_resources
-    host.xhyve.install
     host.xhyve.bundle
     qemu.bundle
   end
@@ -322,14 +282,14 @@ class CIRunner
     host.qemu.ldflags
   end
 
-  private
-
   def host
     @host ||= begin
       os = Gem::Platform.local.os
       host_map[os]&.new or raise "Unsupported operating system: #{os}"
     end
   end
+
+  private
 
   def host_map
     {
@@ -376,12 +336,51 @@ class CIRunner
       end
     end
 
-    def install_prerequisite
-      packages = %w[ninja pixman glib meson]
-      execute "brew", "install", *packages, env: { HOMEBREW_NO_INSTALL_CLEANUP: true }
+    def libslirp
+      @libslirp ||= Libslirp.new
     end
 
-    def bundle_uefi(_firmware_target_dir)
+    def bundle_uefi(firmware_target_dir)
+      FileUtils.cp "OVMF.fd", File.join(firmware_target_dir, "uefi.fd")
+    end
+
+    def install_prerequisite
+      packages = %w[ninja pixman glib meson libslirp]
+      execute "brew", "install", *packages, env: { HOMEBREW_NO_INSTALL_CLEANUP: true }
+      patch_glib_python_codegen
+    end
+
+    # Python 3.12 doesn't have the distutils module.
+    # Remove when updating to a version of glib newer than 2.78.3.
+    def patch_glib_python_codegen
+      patch = <<~DIFF
+        diff --git a/gio/gdbus-2.0/codegen/utils.py b/gio/gdbus-2.0/codegen/utils.py
+        index 02046108dae49efb140c6438b03b80a73770d2c0..08f1ba9731d0582015ef9807eb739a3efa410e0d 100644
+        --- a/gio/gdbus-2.0/codegen/utils.py
+        +++ b/gio/gdbus-2.0/codegen/utils.py
+        @@ -19,7 +19,7 @@
+         #
+         # Author: David Zeuthen <davidz@redhat.com>
+
+        -import distutils.version
+        +import packaging.version
+         import os
+         import sys
+
+        @@ -166,4 +166,4 @@ def version_cmp_key(key):
+                 v = str(key[0])
+             else:
+                 v = "0"
+        -    return (distutils.version.LooseVersion(v), key[1])
+        +    return (packaging.version.Version(v), key[1])
+      DIFF
+
+      Dir.chdir("/usr/local/Cellar/glib/2.78.3/share/glib-2.0") do
+        _, status = Open3.capture2("patch", "-p3", stdin_data: patch)
+        raise "Failed to execute 'patch' command" unless status.success?
+      end
+
+      execute "pip3", "install", "packaging"
     end
 
     class Qemu < Host::Qemu
@@ -419,70 +418,34 @@ class CIRunner
     private_constant :Qemu
 
     class Xhyve
+      attr_reader :host
+
       def initialize(host)
         @host = host
       end
 
-      def install
-        execute "brew", "install", "--HEAD", "xhyve"
-      end
-
       def bundle
-        FileUtils.mkdir_p "work/bin"
-        bundle_bhyve_uefi
-        FileUtils.cp Bundler.which("xhyve"), "work/bin"
-        codesign
-
-        xhyve_brew_path = `brew --cellar xhyve`.strip
-        xhyve_version = `brew info xhyve --json | jq .[].installed[].version -r`.strip
-        userboot_path = File.join(xhyve_brew_path, xhyve_version, "share/xhyve/test/userboot.so")
-        FileUtils.cp userboot_path, "work"
-        execute "tar", "-C", "work", "-c", "-f", "xhyve-#{host.name}.tar", "."
-        FileUtils.rm_r "work"
-      end
-
-      private
-
-      ENTITLEMENT = <<~XML
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>com.apple.security.hypervisor</key>
-            <true/>
-        </dict>
-        </plist>
-      XML
-
-      attr_reader :host
-
-      def codesign
-        Tempfile.open("entitlement") do |file|
-          file.write ENTITLEMENT
-          file.rewind
-
-          execute "codesign",
-            "-s", "-",
-            "--entitlements", file.path,
-            "--force",
-            "work/bin/xhyve"
-        end
-      end
-
-      def bundle_bhyve_uefi
-        work_dir = File.join(Dir.pwd, "work")
-
-        Dir.mktmpdir do |dir|
-          Dir.chdir(dir) do
-            download_file("https://github.com/cross-platform-actions/resources/releases/download/v0.6.0/xhyve-macos.tar", "xhyve.tar")
-            execute "tar", "xf", "xhyve.tar"
-            FileUtils.mv "uefi.fd", work_dir
-          end
-        end
+        # Reuse previously packaged Xhyve because: "xhyve has been disabled because it does not build"
+        # https://github.com/cross-platform-actions/resources/actions/runs/7292733675/job/19874361022#step:3:3225
+        download_file("https://github.com/cross-platform-actions/resources/releases/download/v0.9.1/xhyve-macos.tar", "xhyve-#{host.name}.tar")
       end
     end
 
     private_constant :Xhyve
+
+    class Libslirp
+      def build
+      end
+
+      def ldflags
+        []
+      end
+
+      def cleanup
+      end
+    end
+
+    private_constant :Libslirp
   end
 
   class Linux < Host
@@ -492,6 +455,10 @@ class CIRunner
 
     def xhyve
       @xhyve ||= XhyveNoop.new(self)
+    end
+
+    def libslirp
+      @libslirp ||= Libslirp.new
     end
 
     def install_prerequisite
@@ -534,6 +501,47 @@ class CIRunner
     end
 
     private_constant :Qemu
+
+    class Libslirp
+      def build
+        Dir.chdir(temp_dir) do
+          fetch
+          _build
+        end
+      end
+
+      def ldflags
+        [File.join(target_path, "build", "libslirp.a")]
+      end
+
+      def cleanup
+        FileUtils.remove_entry(temp_dir)
+      end
+
+      private
+
+      def temp_dir
+        @temp_dir ||= Dir.mktmpdir
+      end
+
+      def target_path
+        @target_path ||= File.join(temp_dir, "libslirp-master")
+      end
+
+      def fetch
+        download_file("https://gitlab.com/qemu-project/libslirp/-/archive/master/libslirp-master.tar", "libslirp.tar")
+        execute "tar", "-xf", "libslirp.tar"
+      end
+
+      def _build
+        Dir.chdir(target_path) do
+          execute "meson", "setup", "-Ddefault_library=static", "build"
+          execute "ninja", "-C", "build", "install"
+        end
+      end
+    end
+
+    private_constant :Libslirp
   end
 
   class XhyveNoop

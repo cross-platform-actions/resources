@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Bundle QEMU UEFI for x86-64
+
 ## 0.9.1
 
 ### Bugs Fixed:

@@ -52,15 +52,14 @@ describe "resources" do
   describe "qemu-system" do
     describe "x86_64" do
       it "contains the correct file structure for x86_64" do
-        uefi = QemuSystemValidator.host_os == "macos" ? [] : ["uefi.fd"]
-
         assert_qemu_system "x86_64", firmwares: %w[
           bios-256k.bin
           efi-e1000.rom
           efi-virtio.rom
           kvmvapic.bin
           vgabios-stdvga.bin
-        ].concat(uefi)
+          uefi.fd
+        ]
       end
 
       it "is only linked with system dependencies" do
