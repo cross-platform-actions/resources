@@ -13,7 +13,7 @@ jobs:
   build_qemu_linux:
     name: Build QEMU on Linux
     runs-on: ubuntu-latest
-    container: alpine
+    container: alpine:3.18
     steps:
       - name: Clone Repository
         uses: actions/checkout@v3

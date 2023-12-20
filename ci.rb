@@ -398,8 +398,8 @@ class CIRunner
           "-lresolv",
           "#{brew_prefix}/opt/dtc/lib/libfdt.a",
           "#{brew_prefix}/opt/gettext/lib/libintl.a",
-          "#{brew_prefix}/opt/glib/lib/libgio-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libglib-2.0.a",
+          "#{brew_prefix}/opt/glib/lib/libgio-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libgmodule-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libgobject-2.0.a",
           "#{brew_prefix}/opt/pixman/lib/libpixman-1.a",
@@ -469,6 +469,8 @@ class CIRunner
         gcc
         glib-dev
         glib-static
+        libblkid
+        libmount
         make
         meson
         musl-dev
