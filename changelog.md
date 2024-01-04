@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Bundle QEMU UEFI for x86-64
+* Bump QEMU to 8.2.0
 
 ## 0.9.1
 

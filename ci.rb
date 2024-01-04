@@ -8,7 +8,7 @@ require "tmpdir"
 
 class Qemu
   # Version of QEMU to bundle
-  VERSION = "8.0.3"
+  VERSION = "8.2.0"
 
   # Map of canonicalized host architectures
   ALIASES = {
@@ -192,7 +192,6 @@ class Qemu
         --disable-gtk
         --disable-guest-agent
         --disable-guest-agent-msi
-        --disable-hax
         --disable-kvm
         --disable-libiscsi
         --disable-libssh
