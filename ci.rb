@@ -32,7 +32,7 @@ class Qemu
       FileUtils.mkdir_p firmware_target_directory
       bundle_uefi
       FileUtils.cp File.join("qemu", "build", qemu_name), File.join(qemu_target_dir, "qemu")
-      FileUtils.cp(firmwares.map { File.join(firmware_source_directory, _1) }, firmware_target_directory)
+      bundle_firmware
       execute "tar", "-C", architecture_directory, "-c", "-f", "#{qemu_name}-#{ci_runner.os_name}.tar", "."
     end
 
@@ -62,6 +62,17 @@ class Qemu
 
     def qemu_name
       "qemu-system-#{name}"
+    end
+
+    def bundle_firmware
+      firmware_paths = firmwares.map { File.join(firmware_source_directory, _1) }
+
+      firmware_paths
+        .map { _1 + ".bz2" }
+        .filter { File.exist?(_1) }
+        .each { unpack_bzip2(_1) }
+
+      FileUtils.cp(firmware_paths, firmware_target_directory)
     end
   end
 
@@ -128,7 +139,7 @@ class Qemu
       return unless File.exist?(archive)
 
       FileUtils.rm_f uefi_source_path
-      execute "bzip2", "-d", archive
+      unpack_bzip2 archive
     end
 
     def bundle_linaro_uefi
@@ -575,6 +586,10 @@ def download_file(url, destination)
   URI.open(url) do |uri|
     File.open(destination, 'w') { _1.write(uri.read) }
   end
+end
+
+def unpack_bzip2(archive)
+  execute "bzip2", "-d", archive
 end
 
 CIRunner.new.run
