@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.10.0
+
+### New/Changed Features
+
 * Bundle QEMU UEFI for x86-64
 * Bump QEMU to 8.2.0
 
