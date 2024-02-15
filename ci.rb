@@ -203,7 +203,6 @@ class Qemu
         --disable-gtk
         --disable-guest-agent
         --disable-guest-agent-msi
-        --disable-kvm
         --disable-libiscsi
         --disable-libssh
         --disable-libusb

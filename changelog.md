@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Enable hardware acceleration (KVM) on Linux
+
 ## 0.10.0
 
 ### New/Changed Features
