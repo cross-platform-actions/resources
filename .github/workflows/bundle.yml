@@ -15,83 +15,88 @@ jobs:
     runs-on: ubuntu-latest
     container: alpine:3.18
     steps:
-      - name: Clone Repository
-        uses: actions/checkout@v3
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
         with:
-          persist-credentials: false
+          limit-access-to-actor: true
 
-      - name: Install Ruby
-        run: apk add --no-cache ruby ruby-bundler ruby-minitest file
+      # - name: Clone Repository
+      #   uses: actions/checkout@v3
+      #   with:
+      #     persist-credentials: false
+      #
+      # - name: Install Ruby
+      #   run: apk add --no-cache ruby ruby-bundler ruby-minitest file
+      #
+      # - name: Run CI Script
+      #   run: ./ci.rb
+      #
+      # - name: Run Tests
+      #   run: ./test.rb
+      #
+      # - name: Extract Version
+      #   id: version
+      #   if: startsWith(github.ref, 'refs/tags/v')
+      #   run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
+      #
+      # - name: Create Release
+      #   id: create_release
+      #   if: startsWith(github.ref, 'refs/tags/v')
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     name: Resources ${{ steps.version.outputs.VERSION }}
+      #     draft: true
+      #     files: '*.tar'
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run CI Script
-        run: ./ci.rb
-
-      - name: Run Tests
-        run: ./test.rb
-
-      - name: Extract Version
-        id: version
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
-
-      - name: Create Release
-        id: create_release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v1
-        with:
-          name: Resources ${{ steps.version.outputs.VERSION }}
-          draft: true
-          files: '*.tar'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  get_ovmf_uefi_file:
-    name: Get OVMF UEFI files
-    runs-on: ubuntu-latest
-    container: alpine
-    steps:
-      - name: Install OVMF
-        run: apk add ovmf --no-cache
-
-      - name: Persist OVMF file
-        uses: actions/upload-artifact@v4
-        with:
-          name: ovmf_file
-          path: /usr/share/OVMF/OVMF.fd
-          retention-days: 1
-
-  build_qemu_macos:
-    name: Build QEMU on macOS
-    runs-on: macos-11
-    needs: [get_ovmf_uefi_file]
-    steps:
-      - name: Clone Repository
-        uses: actions/checkout@v3
-        with:
-          persist-credentials: false
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: ovmf_file
-
-      - name: Run CI Script
-        run: ./ci.rb
-
-      - name: Run Tests
-        run: ./test.rb
-
-      - name: Extract Version
-        id: version
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
-
-      - name: Create Release
-        id: create_release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v1
-        with:
-          name: Resources ${{ steps.version.outputs.VERSION }}
-          draft: true
-          files: '*.tar'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # get_ovmf_uefi_file:
+  #   name: Get OVMF UEFI files
+  #   runs-on: ubuntu-latest
+  #   container: alpine
+  #   steps:
+  #     - name: Install OVMF
+  #       run: apk add ovmf --no-cache
+  #
+  #     - name: Persist OVMF file
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: ovmf_file
+  #         path: /usr/share/OVMF/OVMF.fd
+  #         retention-days: 1
+  #
+  # build_qemu_macos:
+  #   name: Build QEMU on macOS
+  #   runs-on: macos-11
+  #   needs: [get_ovmf_uefi_file]
+  #   steps:
+  #     - name: Clone Repository
+  #       uses: actions/checkout@v3
+  #       with:
+  #         persist-credentials: false
+  #
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: ovmf_file
+  #
+  #     - name: Run CI Script
+  #       run: ./ci.rb
+  #
+  #     - name: Run Tests
+  #       run: ./test.rb
+  #
+  #     - name: Extract Version
+  #       id: version
+  #       if: startsWith(github.ref, 'refs/tags/v')
+  #       run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
+  #
+  #     - name: Create Release
+  #       id: create_release
+  #       if: startsWith(github.ref, 'refs/tags/v')
+  #       uses: softprops/action-gh-release@v1
+  #       with:
+  #         name: Resources ${{ steps.version.outputs.VERSION }}
+  #         draft: true
+  #         files: '*.tar'
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
