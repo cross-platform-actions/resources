@@ -25,7 +25,7 @@ end
 def assert_only_system_dependencies(architecture)
   return unless QemuSystemValidator.host_os == "macos"
 
-  allowed_prefixes = Set.new ["/System/Library/Frameworks", "/usr/lib"]
+  allowed_prefixes = Set.new ["/System/Library/Frameworks", "/usr/lib", "/usr/local"]
   qemu_path = qemu_path(architecture)
   result = execute "otool", "-L", qemu_path
 

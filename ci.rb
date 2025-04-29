@@ -8,7 +8,7 @@ require "tmpdir"
 
 class Qemu
   # Version of QEMU to bundle
-  VERSION = "8.2.0"
+  VERSION = "10.0.0"
 
   # Map of canonicalized host architectures
   ALIASES = {
@@ -354,42 +354,15 @@ class CIRunner
     end
 
     def install_prerequisite
-      packages = %w[ninja pixman glib meson libslirp]
+      packages = %w[ninja pixman glib meson libslirp dtc python-setuptools]
       execute "brew", "install", *packages, env: { HOMEBREW_NO_INSTALL_CLEANUP: true }
-      patch_glib_python_codegen
-    end
-
-    # Python 3.12 doesn't have the distutils module.
-    # Remove when updating to a version of glib newer than 2.78.3.
-    def patch_glib_python_codegen
-      patch = <<~DIFF
-        diff --git a/gio/gdbus-2.0/codegen/utils.py b/gio/gdbus-2.0/codegen/utils.py
-        index 02046108dae49efb140c6438b03b80a73770d2c0..08f1ba9731d0582015ef9807eb739a3efa410e0d 100644
-        --- a/gio/gdbus-2.0/codegen/utils.py
-        +++ b/gio/gdbus-2.0/codegen/utils.py
-        @@ -19,7 +19,7 @@
-         #
-         # Author: David Zeuthen <davidz@redhat.com>
-
-        -import distutils.version
-        +import packaging.version
-         import os
-         import sys
-
-        @@ -166,4 +166,4 @@ def version_cmp_key(key):
-                 v = str(key[0])
-             else:
-                 v = "0"
-        -    return (distutils.version.LooseVersion(v), key[1])
-        +    return (packaging.version.Version(v), key[1])
-      DIFF
-
-      Dir.chdir("/usr/local/Cellar/glib/2.78.3/share/glib-2.0") do
-        _, status = Open3.capture2("patch", "-p3", stdin_data: patch)
-        raise "Failed to execute 'patch' command" unless status.success?
-      end
-
       execute "pip3", "install", "packaging"
+
+      execute "echo TEST"
+      execute "brew ls --verbose pixman"
+      execute "brew list pixman"
+      execute "ls", "-laR", "/usr/local/opt/pixman/lib/", "/usr/local/lib/"
+      
     end
 
     class Qemu < Host::Qemu
@@ -411,7 +384,7 @@ class CIRunner
           "#{brew_prefix}/opt/glib/lib/libgio-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libgmodule-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libgobject-2.0.a",
-          "#{brew_prefix}/opt/pixman/lib/libpixman-1.a",
+          "#{brew_prefix}/opt/pixman/lib/libpixman-1.dylib",
           "#{brew_prefix}/lib/libpcre2-8.a",
           "#{brew_prefix}/lib/libslirp.a"
         ]
@@ -436,7 +409,7 @@ class CIRunner
       def bundle
         # Reuse previously packaged Xhyve because: "xhyve has been disabled because it does not build"
         # https://github.com/cross-platform-actions/resources/actions/runs/7292733675/job/19874361022#step:3:3225
-        download_file("https://github.com/cross-platform-actions/resources/releases/download/v0.9.1/xhyve-macos.tar", "xhyve-#{host.name}.tar")
+        download_file("https://github.com/cross-platform-actions/resources/releases/download/v0.11.0/xhyve-macos.tar", "xhyve-#{host.name}.tar")
       end
     end
 
@@ -473,11 +446,15 @@ class CIRunner
     def install_prerequisite
       packages = %w[
         bash
+        git
         curl
         g++
         gcc
         glib-dev
         glib-static
+        util-linux-dev
+        util-linux-static
+        build-base
         libblkid
         libmount
         make
