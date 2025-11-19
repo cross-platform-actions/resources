@@ -354,6 +354,8 @@ class CIRunner
     end
 
     def install_prerequisite
+      return unless ENV.key?("CI")
+
       packages = %w[ninja pixman glib meson libslirp]
       execute "brew", "install", *packages, env: { HOMEBREW_NO_INSTALL_CLEANUP: true }
       patch_glib_python_codegen
@@ -471,6 +473,8 @@ class CIRunner
     end
 
     def install_prerequisite
+      return unless ENV.key?("CI")
+
       packages = %w[
         bash
         curl
