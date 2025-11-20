@@ -359,6 +359,27 @@ class CIRunner
 
       packages = %w[ninja glib meson libslirp gettext pcre2 dtc]
       execute "brew", "install", *packages, env: { HOMEBREW_NO_INSTALL_CLEANUP: true }
+
+      FileUtils.remove(dynamic_library_paths_to_remove, force: true)
+    end
+
+    private
+
+    def brew_prefix
+      @brew_prefix ||= `brew --prefix`.strip
+    end
+
+    def dynamic_library_paths_to_remove
+      @dynamic_library_paths_to_remove ||= %w[
+        /dtc/lib/libfdt.1
+        /gettext/lib/libintl.8
+        /glib/lib/libgio-2.0.0
+        /glib/lib/libglib-2.0.0
+        /glib/lib/libgmodule-2.0.0
+        /glib/lib/libgobject-2.0.0
+        /libslirp/lib/libslirp.0
+        /pixman/lib/libpixman-1.0
+      ].map { File.join(brew_prefix, "opt", _1) + ".dylib" }
     end
 
     class Qemu < Host::Qemu
