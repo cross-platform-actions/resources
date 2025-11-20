@@ -25,6 +25,10 @@ class Qemu
       self.class.name.split("::").last.downcase
     end
 
+    def qemu_name
+      "qemu-system-#{name}"
+    end
+
     def bundle
       qemu_target_dir = File.join(architecture_directory, "bin")
 
@@ -58,10 +62,6 @@ class Qemu
 
     def architecture_directory
       File.join(target_directory, qemu_name)
-    end
-
-    def qemu_name
-      "qemu-system-#{name}"
     end
 
     def bundle_firmware
@@ -232,8 +232,9 @@ class Qemu
       ].append(target_list_arg)
        .concat(ci_runner.qemu_build_flags)
 
+      make_targets = enabled_architectures.map(&:qemu_name).join(" ")
       execute "../configure", *args, env: { LDFLAGS: ldflags }
-      execute "make qemu-img qemu-system-aarch64 qemu-system-x86_64"
+      execute "make qemu-img #{make_targets}"
       execute "ls", "-lh"
     end
   ensure
