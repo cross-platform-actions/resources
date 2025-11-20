@@ -234,7 +234,7 @@ class Qemu
 
       make_targets = enabled_architectures.map(&:qemu_name).join(" ")
       execute "../configure", *args, env: { LDFLAGS: ldflags }
-      execute "make qemu-img #{make_targets}"
+      execute "make -j#{Etc.nprocessors} qemu-img #{make_targets}"
       execute "ls", "-lh"
     end
   ensure
