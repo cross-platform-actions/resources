@@ -357,7 +357,7 @@ class CIRunner
     def install_prerequisite
       return unless ENV.key?("CI")
 
-      packages = %w[ninja pixman glib meson libslirp gettext pcre2 dtc]
+      packages = %w[ninja glib meson libslirp gettext pcre2 dtc]
       execute "brew", "install", *packages, env: { HOMEBREW_NO_INSTALL_CLEANUP: true }
     end
 
@@ -380,7 +380,6 @@ class CIRunner
           "#{brew_prefix}/opt/glib/lib/libgio-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libgmodule-2.0.a",
           "#{brew_prefix}/opt/glib/lib/libgobject-2.0.a",
-          "#{brew_prefix}/opt/pixman/lib/libpixman-1.a",
           "#{brew_prefix}/lib/libpcre2-8.a",
           "#{brew_prefix}/lib/libslirp.a"
         ]
@@ -458,8 +457,6 @@ class CIRunner
         ninja
         ovmf
         perl
-        pixman-dev
-        pixman-static
         pkgconf
         python3
         xz
