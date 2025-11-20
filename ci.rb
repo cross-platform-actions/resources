@@ -480,6 +480,7 @@ class CIRunner
         curl
         g++
         gcc
+        git
         glib-dev
         glib-static
         libblkid
