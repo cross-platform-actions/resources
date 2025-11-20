@@ -357,7 +357,7 @@ class CIRunner
     def install_prerequisite
       return unless ENV.key?("CI")
 
-      packages = %w[ninja pixman glib meson libslirp]
+      packages = %w[ninja pixman glib meson libslirp gettext pcre2 dtc]
       execute "brew", "install", *packages, env: { HOMEBREW_NO_INSTALL_CLEANUP: true }
     end
 
