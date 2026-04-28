@@ -48,6 +48,10 @@ class Qemu
       @firmware_source_directory ||= File.join("qemu", "pc-bios")
     end
 
+    # Hook for firmware that does not ship with QEMU's own `pc-bios`
+    # directory. Most architectures have none.
+    def bundle_uefi = nil
+
     private
 
     attr_reader :qemu
@@ -196,10 +200,25 @@ class Qemu
     def uboot_target_path = File.join(firmware_target_directory, "u-boot.bin")
   end
 
+  class Sparc64 < Architecture
+    # OpenBIOS is QEMU's default firmware for the `sun4u` machine type. The
+    # machine always has a PCI VGA adapter, so QEMU refuses to start without
+    # its option ROM, even with `-display none`. Like the other architectures'
+    # firmware both are loaded from the data directory at runtime.
+    FIRMWARES = %w[
+      openbios-sparc64
+      vgabios-stdvga.bin
+    ].freeze
+
+    private_constant :FIRMWARES
+
+    def firmwares = FIRMWARES
+  end
+
   # Specifies which QEMU architectures to bundle for a given host architecture.
   ENABLED_ARCHITECTURES = {
-    x86_64: [X86_64, Arm64, Riscv64],
-    arm64: [Arm64]
+    x86_64: [X86_64, Arm64, Riscv64, Sparc64],
+    arm64: [Arm64, Sparc64]
   }.freeze
 
   attr_reader :ci_runner

@@ -124,6 +124,27 @@ describe "resources" do
         assert_statically_linked "riscv64"
       end
     end
+
+    describe "sparc64" do
+      it "contains the correct file structure for sparc64" do
+        assert_qemu_system "sparc64", firmwares: %w[
+          openbios-sparc64
+          vgabios-stdvga.bin
+        ]
+      end
+
+      it "contains usable firmware files for sparc64" do
+        assert_usable_firmwares "sparc64"
+      end
+
+      it "is only linked with system dependencies" do
+        assert_only_system_dependencies "sparc64"
+      end
+
+      it "is statically linked" do
+        assert_statically_linked "sparc64"
+      end
+    end
   end
 end
 

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Bundle `qemu-system-sparc64`, with OpenBIOS and the VGA option ROM, to
+  support NetBSD SPARC64
+
 ## [2.0.0] - 2026-08-13
 
 ### Added
