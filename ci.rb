@@ -355,6 +355,7 @@ class CIRunner
     end
 
     def install_prerequisite
+      ENV["MACOSX_DEPLOYMENT_TARGET"] ||= "13.0"
       return unless ENV.key?("CI")
 
       packages = %w[ninja glib meson libslirp gettext pcre2 dtc]

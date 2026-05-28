@@ -69,7 +69,7 @@ jobs:
 
   build_qemu_macos:
     name: Build QEMU on macOS
-    runs-on: macos-13
+    runs-on: macos-26-intel
     needs: [get_ovmf_uefi_file]
     steps:
       - name: Clone Repository
