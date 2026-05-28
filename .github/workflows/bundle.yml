@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Ruby
-        run: apk add --no-cache ruby ruby-bundler ruby-minitest file
+        run: apk add --no-cache ruby ruby-bundler ruby-minitest file github-cli
 
       - name: Run CI Script
         run: ./ci.rb
@@ -29,21 +29,28 @@ jobs:
       - name: Run Tests
         run: ./test.rb
 
-      - name: Extract Version
-        id: version
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
       - name: Create Release
-        id: create_release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Resources ${{ steps.version.outputs.VERSION }}
-          draft: true
-          files: '*.tar'
+        if: github.ref_type == 'tag'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github_ref_name: ${{ github.ref_name }}
+        run: |
+          version="${github_ref_name#v}"
+
+          # Matrix jobs run in parallel; the first to arrive creates the
+          # draft release, the rest upload their artifacts to it.
+          # (gh release create with --draft does not deduplicate by tag.)
+          if gh release view "$github_ref_name" >/dev/null 2>&1; then
+            gh release upload "$github_ref_name" *.tar --clobber
+          else
+            sed -n "/^## \[${version}\]/,/^## \[/{/^## \[${version}\]/d;/^## \[/d;p;}" changelog.md \
+              | gh release create \
+                "$github_ref_name" \
+                --title "Resources ${version}" \
+                --draft \
+                --notes-file - \
+                *.tar
+          fi
 
   get_ovmf_uefi_file:
     name: Get OVMF UEFI files
@@ -80,18 +87,25 @@ jobs:
       - name: Run Tests
         run: ./test.rb
 
-      - name: Extract Version
-        id: version
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
       - name: Create Release
-        id: create_release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Resources ${{ steps.version.outputs.VERSION }}
-          draft: true
-          files: '*.tar'
+        if: github.ref_type == 'tag'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github_ref_name: ${{ github.ref_name }}
+        run: |
+          version="${github_ref_name#v}"
+
+          # Matrix jobs run in parallel; the first to arrive creates the
+          # draft release, the rest upload their artifacts to it.
+          # (gh release create with --draft does not deduplicate by tag.)
+          if gh release view "$github_ref_name" >/dev/null 2>&1; then
+            gh release upload "$github_ref_name" *.tar --clobber
+          else
+            sed -n "/^## \[${version}\]/,/^## \[/{/^## \[${version}\]/d;/^## \[/d;p;}" changelog.md \
+              | gh release create \
+                "$github_ref_name" \
+                --title "Resources ${version}" \
+                --draft \
+                --notes-file - \
+                *.tar
+          fi
