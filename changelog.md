@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New/Changed Features
+
+* Bump QEMU to 10.2.3
+
 ## 0.12.0
 
 ### New/Changed Features
