@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Bump QEMU to 10.2.3
 
+### Removed
+
+* Remove support for xhyve
+
 ## [0.12.0] - 2025-11-22
 
 ### Changed

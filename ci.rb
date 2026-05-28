@@ -268,7 +268,6 @@ class CIRunner
     qemu.fetch
     qemu.build
     bundle_resources
-    host.xhyve.bundle
     qemu.bundle
   end
 
@@ -337,13 +336,6 @@ class CIRunner
   class MacOS < Host
     def qemu
       @qemu ||= Qemu.new
-    end
-
-    def xhyve
-      @xhyve ||= begin
-        cls = Gem::Platform.local.cpu == "x86_64" ? Xhyve : XhyveNoop
-        cls.new(self)
-      end
     end
 
     def libslirp
@@ -416,22 +408,6 @@ class CIRunner
 
     private_constant :Qemu
 
-    class Xhyve
-      attr_reader :host
-
-      def initialize(host)
-        @host = host
-      end
-
-      def bundle
-        # Reuse previously packaged Xhyve because: "xhyve has been disabled because it does not build"
-        # https://github.com/cross-platform-actions/resources/actions/runs/7292733675/job/19874361022#step:3:3225
-        download_file("https://github.com/cross-platform-actions/resources/releases/download/v0.9.1/xhyve-macos.tar", "xhyve-#{host.name}.tar")
-      end
-    end
-
-    private_constant :Xhyve
-
     class Libslirp
       def build
       end
@@ -450,10 +426,6 @@ class CIRunner
   class Linux < Host
     def qemu
       @qemu ||= Qemu.new
-    end
-
-    def xhyve
-      @xhyve ||= XhyveNoop.new(self)
     end
 
     def libslirp
@@ -544,17 +516,6 @@ class CIRunner
     end
 
     private_constant :Libslirp
-  end
-
-  class XhyveNoop
-    def initialize(_host)
-    end
-
-    def install
-    end
-
-    def bundle
-    end
   end
 
   private
