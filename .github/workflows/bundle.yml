@@ -16,7 +16,7 @@ jobs:
     container: alpine:3.18
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -61,7 +61,7 @@ jobs:
         run: apk add ovmf --no-cache
 
       - name: Persist OVMF file
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ovmf_file
           path: /usr/share/OVMF/OVMF.fd
@@ -73,11 +73,11 @@ jobs:
     needs: [get_ovmf_uefi_file]
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ovmf_file
 
