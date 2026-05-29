@@ -33,6 +33,11 @@ jobs:
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Set the repo explicitly so gh does not shell out to git to
+          # detect it. The Linux container checkout has no .git directory
+          # (git is absent, so checkout downloads a tarball), and the macOS
+          # runner's Homebrew git is broken (missing libintl.8.dylib).
+          GH_REPO: ${{ github.repository }}
           github_ref_name: ${{ github.ref_name }}
         run: |
           version="${github_ref_name#v}"
@@ -91,6 +96,11 @@ jobs:
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Set the repo explicitly so gh does not shell out to git to
+          # detect it. The Linux container checkout has no .git directory
+          # (git is absent, so checkout downloads a tarball), and the macOS
+          # runner's Homebrew git is broken (missing libintl.8.dylib).
+          GH_REPO: ${{ github.repository }}
           github_ref_name: ${{ github.ref_name }}
         run: |
           version="${github_ref_name#v}"
