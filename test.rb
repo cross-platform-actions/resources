@@ -89,6 +89,24 @@ describe "resources" do
         assert_statically_linked "aarch64"
       end
     end
+
+    describe "riscv64" do
+      it "contains the correct file structure for riscv64" do
+        assert_qemu_system "riscv64", firmwares: %w[
+          efi-virtio.rom
+          opensbi-riscv64-generic-fw_dynamic.bin
+          u-boot.bin
+        ]
+      end
+
+      it "is only linked with system dependencies" do
+        assert_only_system_dependencies "riscv64"
+      end
+
+      it "is statically linked" do
+        assert_statically_linked "riscv64"
+      end
+    end
   end
 end
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Bundle `qemu-system-riscv64` and U-Boot firmware to support FreeBSD RISC-V 64
+
 ## [1.0.0] - 2026-05-29
 
 ### Changed

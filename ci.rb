@@ -156,9 +156,57 @@ class Qemu
     end
   end
 
+  class Riscv64 < Architecture
+    # opensbi-*.bin is QEMU's default RISC-V -bios; it is loaded from the data
+    # directory at runtime (not compiled in), so it must be bundled alongside
+    # the binary like the other architectures' BIOS/UEFI files.
+    FIRMWARES = %w[
+      efi-virtio.rom
+      opensbi-riscv64-generic-fw_dynamic.bin
+    ].freeze
+
+    private_constant :FIRMWARES
+
+    # U-Boot (S-mode) for qemu-riscv64, taken from the Ubuntu u-boot-qemu
+    # package. RISC-V boots via QEMU's built-in OpenSBI plus U-Boot (loaded
+    # with -kernel), which EFI-boots the disk image and forwards the device
+    # tree to the FreeBSD loader. Pinned because superseded versions are
+    # removed from the pool; bump when the build can no longer fetch it.
+    UBOOT_DEB_URL =
+      "http://security.ubuntu.com/ubuntu/pool/main/u/u-boot/" \
+      "u-boot-qemu_2025.10-0ubuntu0.24.04.2_all.deb"
+
+    private_constant :UBOOT_DEB_URL
+
+    UBOOT_SOURCE_PATH = "usr/lib/u-boot/qemu-riscv64_smode/u-boot.bin"
+
+    private_constant :UBOOT_SOURCE_PATH
+
+    def firmwares = FIRMWARES
+
+    # The .deb is an `ar` archive whose data member is zstd-compressed; bsdtar
+    # reads it on both macOS (built-in) and Alpine (libarchive-tools).
+    def bundle_uefi
+      Dir.mktmpdir do |dir|
+        download_file(UBOOT_DEB_URL, File.join(dir, "u-boot-qemu.deb"))
+
+        Dir.chdir(dir) do
+          execute "ar", "x", "u-boot-qemu.deb"
+          execute "bsdtar", "-xf", "data.tar.zst", UBOOT_SOURCE_PATH
+        end
+
+        FileUtils.cp(File.join(dir, UBOOT_SOURCE_PATH), uboot_target_path)
+      end
+    end
+
+    private
+
+    def uboot_target_path = File.join(firmware_target_directory, "u-boot.bin")
+  end
+
   # Specifies which QEMU architectures to bundle for a given host architecture.
   ENABLED_ARCHITECTURES = {
-    x86_64: [X86_64, Arm64],
+    x86_64: [X86_64, Arm64, Riscv64],
     arm64: [Arm64]
   }.freeze
 
@@ -437,12 +485,14 @@ class CIRunner
 
       packages = %w[
         bash
+        binutils
         curl
         g++
         gcc
         git
         glib-dev
         glib-static
+        libarchive-tools
         libblkid
         libmount
         make
