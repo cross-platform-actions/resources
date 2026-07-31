@@ -22,6 +22,11 @@ def assert_qemu_system(architecture, firmwares:)
   assert validator.valid?, validator.message
 end
 
+def assert_usable_firmwares(architecture)
+  validator = FirmwareValidator.new(architecture)
+  assert validator.valid?, validator.message
+end
+
 def assert_only_system_dependencies(architecture)
   return unless QemuSystemValidator.host_os == "macos"
 
@@ -62,6 +67,10 @@ describe "resources" do
         ]
       end
 
+      it "contains usable firmware files for x86_64" do
+        assert_usable_firmwares "x86_64"
+      end
+
       it "is only linked with system dependencies" do
         assert_only_system_dependencies "x86_64"
       end
@@ -77,8 +86,11 @@ describe "resources" do
           efi-e1000.rom
           efi-virtio.rom
           uefi.fd
-          linaro_uefi.fd
         ]
+      end
+
+      it "contains usable firmware files for arm64" do
+        assert_usable_firmwares "aarch64"
       end
 
       it "is only linked with system dependencies" do
@@ -97,6 +109,10 @@ describe "resources" do
           opensbi-riscv64-generic-fw_dynamic.bin
           u-boot.bin
         ]
+      end
+
+      it "contains usable firmware files for riscv64" do
+        assert_usable_firmwares "riscv64"
       end
 
       it "is only linked with system dependencies" do
@@ -200,6 +216,24 @@ class QemuSystemValidator
       @firmware_paths ||= paths.filter { _1.start_with?(firmware_directory) }
     end
 
+    # The contents have to be read while the archive is being iterated, an
+    # entry cannot be read after the reader has moved past it.
+    def firmware_files
+      @firmware_files ||= File.open(filename) do |io|
+        firmware_files = []
+
+        Gem::Package::TarReader.new(io) do |tar|
+          tar.each do |entry|
+            next unless firmware?(entry)
+
+            firmware_files << Firmware.new(basename(entry), entry.read.to_s)
+          end
+        end
+
+        firmware_files
+      end
+    end
+
     def qemu_binary
       @qemu_binary ||= paths.filter { _1.start_with?("bin/qemu") }
     end
@@ -211,6 +245,16 @@ class QemuSystemValidator
     def firmware_directory
       "share/qemu/"
     end
+
+    private
+
+    def firmware?(entry)
+      entry.file? && full_name(entry).start_with?(firmware_directory)
+    end
+
+    def basename(entry) = full_name(entry).delete_prefix(firmware_directory)
+
+    def full_name(entry) = entry.full_name.delete_prefix("./")
   end
 
   class MessageFormatter
@@ -265,4 +309,71 @@ class QemuSystemValidator
       array.map { File.join(tar_file.firmware_directory, _1) }
     end
   end
+end
+
+# Verifies that the bundled firmware files actually contain firmware. A failed
+# download can produce an HTML error or landing page, which is otherwise
+# indistinguishable from a correct bundle since the file is still present.
+class FirmwareValidator
+  def initialize(architecture)
+    @architecture = architecture
+  end
+
+  def valid? = unusable_firmwares.empty?
+
+  def message
+    ["Unusable firmware files in '#{tar_file.filename}':"]
+      .concat(unusable_firmwares.map(&:message))
+      .join("\n")
+  end
+
+  private
+
+  attr_reader :architecture
+
+  def unusable_firmwares
+    @unusable_firmwares ||= tar_file.firmware_files.reject(&:usable?)
+  end
+
+  def tar_file
+    @tar_file ||= QemuSystemValidator::TarFile.for(
+      architecture: architecture,
+      host_os: QemuSystemValidator.host_os
+    )
+  end
+end
+
+# A single firmware file extracted from a bundle.
+class Firmware
+  # The smallest firmware bundled, kvmvapic.bin, is a few kilobytes.
+  MINIMUM_SIZE = 4096
+
+  private_constant :MINIMUM_SIZE
+
+  HTML_SIGNATURE = /\A\s*<(?:!doctype\s+html|html[\s>])/i
+
+  private_constant :HTML_SIGNATURE
+
+  attr_reader :name
+
+  def initialize(name, content)
+    @name = name
+    @content = content
+  end
+
+  def usable? = !html? && large_enough?
+
+  def message
+    return "'#{name}' is an HTML document, not firmware" if html?
+
+    "'#{name}' is #{content.bytesize} bytes, expected at least #{MINIMUM_SIZE}"
+  end
+
+  private
+
+  attr_reader :content
+
+  def html? = HTML_SIGNATURE.match?(content.byteslice(0, 1024).b)
+
+  def large_enough? = content.bytesize >= MINIMUM_SIZE
 end

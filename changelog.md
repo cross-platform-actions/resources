@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+* Stop bundling the Linaro UEFI firmware for ARM64. `linaro_uefi.fd` is no
+  longer part of the `qemu-system-aarch64` tarball. Its only consumer, OpenBSD
+  ARM64, now boots on the shared edk2 `uefi.fd` with ACPI disabled
+  ([cross-platform-actions/action#160](https://github.com/cross-platform-actions/action/pull/160)).
+  The Linaro release server it was downloaded from has been retired and
+  redirects to a landing page, so 1.1.0 shipped an HTML page in its place
+
+### Fixed
+
+* Fail the build when a download returns an unsuccessful HTTP status or an HTML
+  document instead of the requested file
+* Verify the contents of the bundled firmware files, not only their presence
+
 ## [1.1.0] - 2026-07-26
 
 ### Added

@@ -120,8 +120,6 @@ class Qemu
       File.open(uefi_target_path, File::RDWR) do |file|
         file.truncate(file.read.bytes.rindex { _1 != 0 })
       end
-
-      bundle_linaro_uefi
     end
 
     private
@@ -140,19 +138,6 @@ class Qemu
 
       FileUtils.rm_f uefi_source_path
       unpack_bzip2 archive
-    end
-
-    def bundle_linaro_uefi
-      download_file(linaro_uefi_url, linaro_uefi_target_path)
-    end
-
-    def linaro_uefi_url
-      "https://releases.linaro.org/components/kernel/uefi-linaro/latest/release/qemu64/QEMU_EFI.fd"
-    end
-
-    def linaro_uefi_target_path
-      @linaro_uefi_target_path ||=
-        File.join(firmware_target_directory, "linaro_uefi.fd")
     end
   end
 
@@ -583,10 +568,32 @@ def execute(*args, env: {})
   Kernel.system env, *args, exception: true
 end
 
+HTML_CONTENT_TYPES = %w[text/html application/xhtml+xml].freeze
+
+HTML_SIGNATURE = /\A\s*<(?:!doctype\s+html|html[\s>])/i
+
+# Downloads a file, refusing to write anything but the requested payload. A
+# retired host that redirects to a landing page answers with a successful
+# status and an HTML body, which would otherwise silently be bundled as if it
+# were the expected file.
 def download_file(url, destination)
-  URI.open(url) do |uri|
-    File.open(destination, 'w') { _1.write(uri.read) }
+  URI.open(url) do |io|
+    content = io.read
+    validate_download(url, io, content)
+    File.binwrite(destination, content)
   end
+end
+
+def validate_download(url, io, content)
+  raise "Failed to download #{url}: HTTP #{Array(io.status).join(' ')}" unless successful_response?(io)
+  raise "Failed to download #{url}: expected a file, got an HTML document" if html?(io, content)
+end
+
+def successful_response?(io) = Array(io.status).first.to_s.start_with?("2")
+
+def html?(io, content)
+  HTML_CONTENT_TYPES.include?(io.content_type) ||
+    HTML_SIGNATURE.match?(content.byteslice(0, 1024).b)
 end
 
 def unpack_bzip2(archive)
