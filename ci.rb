@@ -77,11 +77,18 @@ class Qemu
   end
 
   class X86_64 < Architecture
+    # qboot.rom is the firmware for the `microvm` machine type, and the only one
+    # that can boot a PVH kernel there: QEMU hands the kernel to the firmware
+    # through fw_cfg rather than entering it itself, and qboot is also what
+    # leaves an MP table behind for a guest configured without ACPI. Given
+    # bios-256k.bin instead, such a guest never starts and says nothing at all
+    # about why.
     FIRMWARES = %w[
       bios-256k.bin
       efi-e1000.rom
       efi-virtio.rom
       kvmvapic.bin
+      qboot.rom
       vgabios-stdvga.bin
     ].freeze
 
