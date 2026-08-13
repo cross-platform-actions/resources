@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Bundle `qboot.rom` in the `qemu-system-x86_64` tarball. qboot is the firmware
+  for QEMU's `microvm` machine type, and the only one that can boot a PVH kernel
+  there, which is how a guest skips the boot loader, the PCI bus and ACPI
+  entirely
+  ([cross-platform-actions/action#151](https://github.com/cross-platform-actions/action/issues/151))
+
 ### Removed
 
 * Stop bundling the Linaro UEFI firmware for ARM64. `linaro_uefi.fd` is no

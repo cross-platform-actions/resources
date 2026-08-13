@@ -62,6 +62,7 @@ describe "resources" do
           efi-e1000.rom
           efi-virtio.rom
           kvmvapic.bin
+          qboot.rom
           vgabios-stdvga.bin
           uefi.fd
         ]
