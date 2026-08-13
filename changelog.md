@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-13
+
 ### Added
 
 * Bundle `qboot.rom` in the `qemu-system-x86_64` tarball. qboot is the firmware
@@ -175,7 +177,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release.
 
-[Unreleased]: https://github.com/cross-platform-actions/resources/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/cross-platform-actions/resources/compare/v2.0.0...HEAD
+
+[2.0.0]: https://github.com/cross-platform-actions/resources/compare/v1.1.0...v2.0.0
 
 [1.1.0]: https://github.com/cross-platform-actions/resources/compare/v1.0.0...v1.1.0
 
