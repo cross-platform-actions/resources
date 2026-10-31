@@ -8,7 +8,7 @@ require "tmpdir"
 
 class Qemu
   # Version of QEMU to bundle
-  VERSION = "10.2.3"
+  VERSION = "11.1.3"
 
   # Map of canonicalized host architectures
   ALIASES = {

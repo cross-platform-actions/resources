@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Bundle `qemu-system-sparc64`, with OpenBIOS and the VGA option ROM, to
   support NetBSD SPARC64
 
+### Changed
+
+* Bump QEMU to 11.1.3
+
 ### Fixed
 
 * Fix lost interrupts on QEMU's `sun4u` machine. Under concurrent disk and
