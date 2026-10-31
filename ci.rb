@@ -170,7 +170,7 @@ class Qemu
     # removed from the pool; bump when the build can no longer fetch it.
     UBOOT_DEB_URL =
       "http://security.ubuntu.com/ubuntu/pool/main/u/u-boot/" \
-      "u-boot-qemu_2025.10-0ubuntu0.24.04.2_all.deb"
+      "u-boot-qemu_2025.10-0ubuntu0.24.04.4_all.deb"
 
     private_constant :UBOOT_DEB_URL
 

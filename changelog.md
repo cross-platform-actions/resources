@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 * Bump QEMU to 11.1.3
+* Bundle U-Boot for RISC-V 64 from Ubuntu's `2025.10-0ubuntu0.24.04.4`
+  package. The previously pinned `2025.10-0ubuntu0.24.04.2` package has been
+  removed from the Ubuntu archive, which broke the build
 
 ### Fixed
 
