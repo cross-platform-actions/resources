@@ -1,0 +1,43 @@
+Fix lost interrupts on the sun4u Sabre PCI host bridge
+
+A NetBSD/sparc64 guest on the `sun4u` machine wedges for good under
+concurrent disk and network I/O. The console prints
+`cmdide0:0:0: lost interrupt` and `hme0: device timeout`, QEMU spins at
+100% CPU, and no device interrupt is delivered again.
+
+`pci_sabre_set_irq()` tracks the pending interrupt in a single slot,
+`irq_request`. Raising a PCI interrupt overwrites that slot even while a
+request for a different INO, such as the onboard cmd646 IDE's OBIO
+interrupt, is still unacknowledged. The guest's interrupt-clear write
+for the first INO then no longer matches `irq_request` and is silently
+dropped, so neither device's interrupt is ever cleared. The OBIO branch
+already refuses to overwrite an outstanding request; this adds the same
+guard to the PCI branch. The PCI level stays latched in `pci_irq_in`,
+and `sabre_check_irqs()` submits it once the current request is
+cleared.
+
+Not upstream in QEMU. Taken from anyvm-org/netbsd-builder (MIT licence,
+Copyright (c) 2025 Run Any VM anywhere - AnyVM.org):
+https://github.com/anyvm-org/netbsd-builder/blob/HEAD/files/qemu-sabre-irq-clobber.patch
+
+--- a/hw/pci-host/sabre.c
++++ b/hw/pci-host/sabre.c
+@@ -308,7 +308,17 @@
+     if (irq_num < 32) {
+         if (level) {
+             s->pci_irq_in |= 1ULL << irq_num;
+-            if (s->pci_irq_map[irq_num >> 2] & PBM_PCI_IMR_ENABLED) {
++            /* Do not overwrite an outstanding request for a DIFFERENT ino:
++             * irq_request is a single slot, and clobbering it makes the
++             * guest's later interrupt-clear write (which must match
++             * irq_request) a silent no-op, permanently wedging both
++             * devices' interrupts (seen as NetBSD/OpenBSD "lost interrupt"
++             * storms when disk and NIC DMA complete concurrently). The
++             * level is latched in pci_irq_in; sabre_check_irqs() will
++             * submit it once the current request is acknowledged. */
++            if ((s->pci_irq_map[irq_num >> 2] & PBM_PCI_IMR_ENABLED) &&
++                (s->irq_request == NO_IRQ_REQUEST ||
++                 s->irq_request == irq_num)) {
+                 sabre_set_request(s, irq_num);
+             }
+         } else {

@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Bundle `qemu-system-sparc64`, with OpenBIOS and the VGA option ROM, to
   support NetBSD SPARC64
 
+### Fixed
+
+* Fix lost interrupts on QEMU's `sun4u` machine. Under concurrent disk and
+  network I/O a NetBSD/sparc64 guest stopped receiving device interrupts for
+  good (`cmdide0:0:0: lost interrupt`, `hme0: device timeout`). The bundled
+  QEMU now carries a patch to the Sabre PCI host bridge, taken from
+  [anyvm-org/netbsd-builder](https://github.com/anyvm-org/netbsd-builder/blob/HEAD/files/qemu-sabre-irq-clobber.patch)
+
 ## [2.0.0] - 2026-08-13
 
 ### Added

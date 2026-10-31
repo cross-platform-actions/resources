@@ -221,10 +221,41 @@ class Qemu
     arm64: [Arm64, Sparc64]
   }.freeze
 
+  # Fixes carried on top of the QEMU release, applied to the extracted source
+  # before it is built. Each patch explains in its header what it fixes and
+  # where it comes from.
+  class Patches
+    DIRECTORY = File.join(__dir__, "patches", "qemu")
+
+    private_constant :DIRECTORY
+
+    def initialize(source_directory, directory: DIRECTORY)
+      @source_directory = source_directory
+      @directory = directory
+    end
+
+    def apply = paths.each { apply_patch(_1) }
+
+    private
+
+    attr_reader :source_directory
+    attr_reader :directory
+
+    def paths = Dir.glob(File.join(directory, "*.patch")).sort
+
+    # Refuses fuzz and already-applied patches, so a patch that no longer
+    # matches the source fails the build instead of shipping unpatched code.
+    def apply_patch(path)
+      execute "patch", "-p1", "--forward", "--fuzz=0",
+        "-d", source_directory, "-i", path
+    end
+  end
+
   attr_reader :ci_runner
 
-  def initialize(ci_runner)
+  def initialize(ci_runner, patches: Patches.new("qemu"))
     @ci_runner = ci_runner
+    @patches = patches
   end
 
   def target_directory
@@ -236,6 +267,7 @@ class Qemu
     execute "xz -cd qemu-#{VERSION}.tar.xz | tar -xf -"
     FileUtils.rm_rf ["qemu", "qemu-#{VERSION}.tar.xz"]
     FileUtils.ln_s "qemu-#{VERSION}", "qemu"
+    patches.apply
   end
 
   def build
@@ -306,6 +338,8 @@ class Qemu
   end
 
   private
+
+  attr_reader :patches
 
   def ldflags
     ci_runner.qemu_ldflags.concat(libslirp.ldflags).join(" ")
@@ -511,6 +545,7 @@ class CIRunner
         musl-dev
         ninja
         ovmf
+        patch
         perl
         pkgconf
         python3
