@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-01
+
 ### Added
 
 * Bundle `qemu-system-sparc64`, with OpenBIOS and the VGA option ROM, to
@@ -197,7 +199,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release.
 
-[Unreleased]: https://github.com/cross-platform-actions/resources/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/cross-platform-actions/resources/compare/v2.1.0...HEAD
+
+[2.1.0]: https://github.com/cross-platform-actions/resources/compare/v2.0.0...v2.1.0
 
 [2.0.0]: https://github.com/cross-platform-actions/resources/compare/v1.1.0...v2.0.0
 
